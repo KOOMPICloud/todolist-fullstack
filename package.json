@@ -1,0 +1,15 @@
+{
+  "name": "todolist-fullstack",
+  "version": "1.0.0",
+  "description": "Full-stack Todo App with KConsole Provider OAuth",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"cd backend && bun run dev\" \"cd frontend && bun run dev\"",
+    "build:frontend": "cd frontend && bun run build",
+    "start": "cd backend && bun run start",
+    "install:all": "cd frontend && bun install && cd ../backend && bun install"
+  },
+  "keywords": ["todo", "fullstack", "kconsole", "oauth"],
+  "author": "KOOMPI Cloud",
+  "license": "MIT"
+}
