@@ -5,6 +5,7 @@
 export const config = {
   clientId: process.env.NEXT_PUBLIC_KOOMPI_PROVIDER_CLIENT_ID || '',
   redirectUri: process.env.NEXT_PUBLIC_KOOMPI_PROVIDER_REDIRECT_URI || '',
+  apiBaseUrl: process.env.NEXT_PUBLIC_KOOMPI_API_BASE_URL || 'https://api-kconsole.koompi.cloud',
 };
 
 /**
@@ -12,16 +13,21 @@ export const config = {
  */
 export const login = () => {
   if (!config.clientId) {
-    console.error('KOOMPI_PROVIDER_CLIENT_ID not configured');
+    console.error('[Auth] KOOMPI_PROVIDER_CLIENT_ID not configured');
+    alert('OAuth not configured. Please ensure this app is deployed on KConsole.');
     return;
   }
+
+  console.log('[Auth] Starting OAuth flow with clientId:', config.clientId);
+  console.log('[Auth] API Base URL:', config.apiBaseUrl);
 
   // Generate state for CSRF protection
   const state = crypto.randomUUID();
   sessionStorage.setItem('oauth_state', state);
 
   // Redirect to KConsole Provider OAuth
-  const loginUrl = `https://api-kconsole.koompi.cloud/api/provider/auth/${config.clientId}?state=${state}`;
+  const loginUrl = `${config.apiBaseUrl}/api/provider/auth/${config.clientId}?state=${state}`;
+  console.log('[Auth] Redirecting to:', loginUrl);
   window.location.href = loginUrl;
 };
 
