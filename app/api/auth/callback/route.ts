@@ -8,32 +8,31 @@ export async function GET(request: NextRequest) {
   const accessToken = searchParams.get('access_token');
   const refreshToken = searchParams.get('refresh_token');
   const userStr = searchParams.get('user');
-  const state = searchParams.get('state');
-
-  // Verify state to prevent CSRF
-  const savedState = sessionStorage?.getItem('oauth_state');
-  if (state && savedState !== state) {
-    return NextResponse.redirect(new URL('/?error=invalid_state', request.url));
-  }
 
   if (!accessToken) {
     return NextResponse.redirect(new URL('/?error=no_token', request.url));
   }
 
-  // Get user info from KID
   try {
-    const response = await fetch('https://oauth.koompi.org/v2/oauth/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
+    // Parse user from URL parameter (already fetched by KConsole)
+    let user;
+    if (userStr) {
+      user = JSON.parse(decodeURIComponent(userStr));
+    } else {
+      // Fallback: fetch from KID if not provided
+      const response = await fetch('https://oauth.koompi.org/v2/oauth/userinfo', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch user info');
+      if (!response.ok) {
+        throw new Error('Failed to fetch user info');
+      }
+
+      const data = await response.json();
+      user = data.user;
     }
-
-    const data = await response.json();
-    const user = data.user;
 
     // Upsert user in database
     const stmt = db.prepare(`
@@ -47,19 +46,34 @@ export async function GET(request: NextRequest) {
         updated_at = CURRENT_TIMESTAMP
     `);
 
-    stmt.run(user._id || user.sub, user.email, user.fullname, user.avatar, user.wallet_address);
+    stmt.run(user._id || user.sub || user.id, user.email, user.fullname, user.profile || user.avatar, user.wallet_address || '');
 
-    // Redirect to frontend with tokens
-    const redirectUrl = new URL('/', request.url);
-    redirectUrl.searchParams.set('access_token', accessToken);
-    if (refreshToken) {
-      redirectUrl.searchParams.set('refresh_token', refreshToken);
-    }
-    if (userStr) {
-      redirectUrl.searchParams.set('user', userStr);
-    }
+    // Create HTML response that stores tokens in localStorage
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Authentication Successful</title>
+        </head>
+        <body>
+          <p>Authentication successful! Redirecting...</p>
+          <script>
+            // Store tokens in localStorage
+            localStorage.setItem('access_token', '${accessToken}');
+            localStorage.setItem('refresh_token', '${refreshToken || ''}');
+            localStorage.setItem('user', '${userStr}');
+            // Redirect to home
+            window.location.href = '/';
+          </script>
+        </body>
+      </html>
+    `;
 
-    return NextResponse.redirect(redirectUrl);
+    return new NextResponse(html, {
+      headers: {
+        'Content-Type': 'text/html',
+      },
+    });
   } catch (error) {
     console.error('Auth callback error:', error);
     return NextResponse.redirect(new URL('/?error=auth_failed', request.url));
