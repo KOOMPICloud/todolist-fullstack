@@ -21,10 +21,8 @@ RUN bun install --frozen-lockfile
 # Stage 3: Build Frontend
 # ============================================
 FROM frontend-deps AS frontend-build
-WORKDIR /build
-COPY .env* ./
-COPY frontend/ ./frontend/
-WORKDIR /build/frontend
+# Copy .env file from repo root to frontend directory for Vite
+COPY .env* ./frontend/
 RUN bun run build
 
 # ============================================
