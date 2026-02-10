@@ -62,6 +62,7 @@ When deployed on KConsole, these are automatically injected:
 NEXT_PUBLIC_KOOMPI_PROVIDER_CLIENT_ID=kcp_xxx
 NEXT_PUBLIC_KOOMPI_PROVIDER_CLIENT_SECRET=xxx
 NEXT_PUBLIC_KOOMPI_PROVIDER_REDIRECT_URI=https://yourapp.tunnel.koompi.cloud/auth/callback
+NEXT_PUBLIC_KOOMPI_API_BASE_URL=https://api-kconsole.koompi.cloud
 DATABASE_PATH=/data/db/app.db
 NODE_ENV=production
 PORT=3000
