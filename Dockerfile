@@ -32,9 +32,6 @@ RUN bun run build
 # ============================================
 FROM oven/bun:1-alpine AS production
 
-# Install Python for serving frontend (fallback)
-RUN apk add --no-cache python3
-
 # Create app directories
 WORKDIR /app
 
@@ -50,22 +47,16 @@ RUN mkdir -p /data/db
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV PORT=3000
 ENV DATABASE_PATH=/data/db/app.db
 
-# Expose ports
-EXPOSE 3001
+# Expose port (backend serves both API and static files)
+EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:3001/api/health').read()"
+  CMD bun -e "require('http').get('http://localhost:3000/api/health', (r) => { if (r.statusCode !== 200) throw new Error('Health check failed') })"
 
-# Start both backend and frontend
-# Backend on port 3001, frontend served by Python on port 3000
-CMD \
-  echo "Starting application..." && \
-  cd backend && bun run start & \
-  echo "Backend started on port 3001" && \
-  sleep 2 && \
-  echo "Starting frontend on port 3000..." && \
-  cd /app/frontend/dist && python3 -m http.server 3000
+# Start backend server (serves both API and static frontend files)
+WORKDIR /app/backend
+CMD ["bun", "src/index.ts"]

@@ -6,7 +6,7 @@ import { Database } from 'bun:sqlite';
  */
 
 // Configuration
-const PORT = parseInt(process.env.PORT || '3001');
+const PORT = parseInt(process.env.PORT || '3000');
 const DATABASE_PATH = process.env.DATABASE_PATH || '/data/db/app.db';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
@@ -114,6 +114,24 @@ const server = Bun.serve({
     const url = new URL(req.url);
     const method = req.method;
     const path = url.pathname;
+
+    // Serve static frontend files for non-API routes
+    if (!path.startsWith('/api') && !path.startsWith('/auth')) {
+      // Try to serve static file
+      const filePath = `../frontend/dist${path === '/' ? '/index.html' : path}`;
+      try {
+        const file = Bun.file(filePath);
+        return new Response(file);
+      } catch {
+        // Fallback to index.html for SPA routing
+        try {
+          const indexFile = Bun.file('../frontend/dist/index.html');
+          return new Response(indexFile);
+        } catch {
+          return new Response('Frontend not found', { status: 404 });
+        }
+      }
+    }
 
     // CORS headers
     const corsHeaders = {
