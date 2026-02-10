@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -32,6 +32,12 @@ export async function GET(request: NextRequest) {
 
       const data = await response.json();
       user = data.user;
+    }
+
+    const db = getDb();
+    if (!db) {
+      console.error('Database not initialized');
+      return NextResponse.redirect(new URL('/?error=database_error', request.url));
     }
 
     // Upsert user in database

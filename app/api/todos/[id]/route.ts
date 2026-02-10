@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -52,6 +52,10 @@ export async function PUT(
       return NextResponse.json({ error: 'Completed is required' }, { status: 400 });
     }
 
+    const db = getDb();
+    if (!db) {
+      return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
+    }
     const stmt = db.prepare(`
       UPDATE todos
       SET completed = ?, updated_at = CURRENT_TIMESTAMP
@@ -82,6 +86,10 @@ export async function DELETE(
   }
 
   try {
+    const db = getDb();
+    if (!db) {
+      return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
+    }
     const stmt = db.prepare('DELETE FROM todos WHERE id = ?');
     stmt.run(id);
 

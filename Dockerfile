@@ -23,6 +23,8 @@ COPY . .
 COPY .env* ./
 
 # Build Next.js
+ENV NEXT_PHASE=phase-production-build
+ENV NODE_ENV=production
 RUN npm run build
 
 # Production image, copy all the files and run next

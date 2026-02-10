@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { getDb } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -42,6 +42,10 @@ export async function GET(request: NextRequest) {
 
   const userId = user._id || user.sub;
 
+  const db = getDb();
+  if (!db) {
+    return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
+  }
   const stmt = db.prepare('SELECT * FROM todos WHERE user_id = ? ORDER BY created_at DESC');
   const todos = stmt.all(userId);
 
@@ -67,6 +71,10 @@ export async function POST(request: NextRequest) {
     }
 
     const id = crypto.randomUUID();
+    const db = getDb();
+    if (!db) {
+      return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
+    }
     const stmt = db.prepare(`
       INSERT INTO todos (id, user_id, title)
       VALUES (?, ?, ?)
