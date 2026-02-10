@@ -32,7 +32,11 @@ export const login = () => {
 
   // Generate state for CSRF protection
   const state = crypto.randomUUID();
-  sessionStorage.setItem('oauth_state', state);
+
+  // Store state in sessionStorage (browser only)
+  if (typeof window !== 'undefined' && window.sessionStorage) {
+    window.sessionStorage.setItem('oauth_state', state);
+  }
 
   // Redirect to KConsole Provider OAuth
   const loginUrl = `${config.apiBaseUrl}/api/provider/auth/${config.clientId}?state=${state}`;
@@ -42,7 +46,9 @@ export const login = () => {
   try {
     new URL(loginUrl);
     console.log('[Auth] Redirecting to KConsole...');
-    window.location.href = loginUrl;
+    if (typeof window !== 'undefined') {
+      window.location.href = loginUrl;
+    }
   } catch (error) {
     console.error('[Auth] Invalid URL:', loginUrl, error);
     alert('Invalid login URL. Check console for details.');
@@ -53,14 +59,16 @@ export const login = () => {
  * Get current access token from localStorage
  */
 export const getToken = () => {
-  return localStorage.getItem('access_token');
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem('access_token');
 };
 
 /**
  * Get current user from localStorage
  */
 export const getUser = () => {
-  const userStr = localStorage.getItem('user');
+  if (typeof window === 'undefined') return null;
+  const userStr = window.localStorage.getItem('user');
   return userStr ? JSON.parse(userStr) : null;
 };
 
@@ -68,7 +76,8 @@ export const getUser = () => {
  * Check if user is authenticated
  */
 export const isAuthenticated = () => {
-  return !!localStorage.getItem('access_token');
+  if (typeof window === 'undefined') return false;
+  return !!window.localStorage.getItem('access_token');
 };
 
 /**
@@ -93,8 +102,10 @@ export const fetchWithAuth = async (url: string, options?: RequestInit) => {
  * Logout user
  */
 export const logout = () => {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('user');
-  window.location.href = '/';
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem('access_token');
+    window.localStorage.removeItem('refresh_token');
+    window.localStorage.removeItem('user');
+    window.location.href = '/';
+  }
 };
