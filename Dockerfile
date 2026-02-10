@@ -21,8 +21,10 @@ RUN bun install --frozen-lockfile
 # Stage 3: Build Frontend
 # ============================================
 FROM frontend-deps AS frontend-build
-WORKDIR /frontend
-COPY frontend/ ./
+WORKDIR /build
+COPY .env* ./
+COPY frontend/ ./frontend/
+WORKDIR /build/frontend
 RUN bun run build
 
 # ============================================
