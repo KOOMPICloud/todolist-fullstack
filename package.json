@@ -1,15 +1,26 @@
 {
   "name": "todolist-fullstack",
   "version": "1.0.0",
-  "description": "Full-stack Todo App with KConsole Provider OAuth",
-  "type": "module",
+  "private": true,
   "scripts": {
-    "dev": "concurrently \"cd backend && bun run dev\" \"cd frontend && bun run dev\"",
-    "build:frontend": "cd frontend && bun run build",
-    "start": "cd backend && bun run start",
-    "install:all": "cd frontend && bun install && cd ../backend && bun install"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
-  "keywords": ["todo", "fullstack", "kconsole", "oauth"],
-  "author": "KOOMPI Cloud",
-  "license": "MIT"
+  "dependencies": {
+    "next": "^16.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "better-sqlite3": "^11.7.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.11",
+    "@types/react-dom": "^19.0.6",
+    "typescript": "^5.7.3",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "16.1.0"
+  }
 }

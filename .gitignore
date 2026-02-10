@@ -2,6 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
+.next
 
 # Production builds
 frontend/dist/
@@ -9,9 +10,10 @@ build/
 
 # Environment files
 .env
-.env.local
+.env*.local
 .env.development.local
-.env.test.local.env.production.local
+.env.test.local
+.env.production.local
 
 # Database
 *.db
