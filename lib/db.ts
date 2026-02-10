@@ -4,6 +4,12 @@ import path from 'path';
 // Database path - uses persistent volume
 const DB_PATH = process.env.DATABASE_PATH || '/data/db/app.db';
 
+// Ensure database directory exists
+const DB_DIR = path.dirname(DB_PATH);
+if (!require('fs').existsSync(DB_DIR)) {
+  require('fs').mkdirSync(DB_DIR, { recursive: true });
+}
+
 // Initialize SQLite database
 const db = new Database(DB_PATH);
 
