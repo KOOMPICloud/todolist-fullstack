@@ -35,9 +35,10 @@ async function getUserFromRequest(request: NextRequest) {
 // PUT /api/todos/[id] - Update a todo
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getUserFromRequest(request);
+  const { id } = await params;
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -57,9 +58,9 @@ export async function PUT(
       WHERE id = ?
     `);
 
-    stmt.run(completed ? 1 : 0, params.id);
+    stmt.run(completed ? 1 : 0, id);
 
-    const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(params.id);
+    const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(id);
 
     return NextResponse.json({ todo });
   } catch (error) {
@@ -71,9 +72,10 @@ export async function PUT(
 // DELETE /api/todos/[id] - Delete a todo
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getUserFromRequest(request);
+  const { id } = await params;
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -81,7 +83,7 @@ export async function DELETE(
 
   try {
     const stmt = db.prepare('DELETE FROM todos WHERE id = ?');
-    stmt.run(params.id);
+    stmt.run(id);
 
     return NextResponse.json({ success: true });
   } catch (error) {
