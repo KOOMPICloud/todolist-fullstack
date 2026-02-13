@@ -54,11 +54,24 @@ function initDatabase() {
       user_id TEXT NOT NULL,
       title TEXT NOT NULL,
       completed INTEGER DEFAULT 0,
+      image_url TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(koompi_id) ON DELETE CASCADE
     );
   `);
+
+  // Migration: Add image_url if it doesn't exist (for existing DBs)
+  try {
+    const tableInfo = dbInstance.pragma('table_info(todos)') as any[];
+    const hasImageUrl = tableInfo.some(col => col.name === 'image_url');
+    if (!hasImageUrl) {
+      console.log('Migrating: Adding image_url column to todos table');
+      dbInstance.exec('ALTER TABLE todos ADD COLUMN image_url TEXT');
+    }
+  } catch (error) {
+    console.error('Migration failed:', error);
+  }
 
   dbInstance.exec(`
     CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id);

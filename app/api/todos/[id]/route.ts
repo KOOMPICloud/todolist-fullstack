@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { deleteFile } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 
@@ -46,23 +47,55 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const { completed } = body;
-
-    if (typeof completed !== 'boolean') {
-      return NextResponse.json({ error: 'Completed is required' }, { status: 400 });
-    }
+    const { completed, title, imageUrl } = body;
 
     const db = getDb();
     if (!db) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
     }
-    const stmt = db.prepare(`
-      UPDATE todos
-      SET completed = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
 
-    stmt.run(completed ? 1 : 0, id);
+    // Check if we need to update image
+    if (imageUrl !== undefined) {
+      // Get current todo to see if there's an old image
+      const currentTodo = db.prepare('SELECT image_url FROM todos WHERE id = ?').get(id) as { image_url: string | null };
+
+      if (currentTodo?.image_url && currentTodo.image_url !== imageUrl) {
+        // Delete old image if it's being replaced or removed
+        console.log(`Deleting old image: ${currentTodo.image_url}`);
+        await deleteFile(currentTodo.image_url);
+      }
+    }
+
+    // Build dynamic update query
+    let updates = [];
+    let values = [];
+
+    if (completed !== undefined) {
+      updates.push('completed = ?');
+      values.push(completed ? 1 : 0);
+    }
+
+    if (title !== undefined) {
+      updates.push('title = ?');
+      values.push(title);
+    }
+
+    if (imageUrl !== undefined) {
+      updates.push('image_url = ?');
+      values.push(imageUrl);
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(id); // For WHERE clause
+
+    if (updates.length > 1) { // > 1 because updated_at is always there
+      const stmt = db.prepare(`
+        UPDATE todos
+        SET ${updates.join(', ')}
+        WHERE id = ?
+      `);
+      stmt.run(...values);
+    }
 
     const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(id);
 
@@ -90,6 +123,15 @@ export async function DELETE(
     if (!db) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
     }
+
+    // Get todo first to check for image
+    const todo = db.prepare('SELECT image_url FROM todos WHERE id = ?').get(id) as { image_url: string | null };
+
+    if (todo?.image_url) {
+      console.log(`Deleting image for todo ${id}: ${todo.image_url}`);
+      await deleteFile(todo.image_url);
+    }
+
     const stmt = db.prepare('DELETE FROM todos WHERE id = ?');
     stmt.run(id);
 

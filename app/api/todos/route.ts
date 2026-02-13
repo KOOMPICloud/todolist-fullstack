@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { title } = body;
+    const { title, imageUrl } = body;
 
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -76,11 +76,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
     }
     const stmt = db.prepare(`
-      INSERT INTO todos (id, user_id, title)
-      VALUES (?, ?, ?)
+      INSERT INTO todos (id, user_id, title, image_url)
+      VALUES (?, ?, ?, ?)
     `);
 
-    stmt.run(id, userId, title);
+    stmt.run(id, userId, title, imageUrl || null);
 
     const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(id);
 
