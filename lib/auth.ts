@@ -39,7 +39,8 @@ export const login = () => {
   }
 
   // Redirect to KConsole Provider OAuth
-  const loginUrl = `${config.apiBaseUrl}/api/provider/auth/${config.clientId}?state=${state}`;
+  const loginUrl = `${config.apiBaseUrl}/api/provider/auth/${config.clientId}?state=${state}${config.redirectUri ? `&redirect_uri=${encodeURIComponent(config.redirectUri)}` : ''
+    }`;
   console.log('[Auth] Login URL:', loginUrl);
 
   // Verify URL format
