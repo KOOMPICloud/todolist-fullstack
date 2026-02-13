@@ -62,7 +62,7 @@ export default function Home() {
       });
 
       if (!tokenRes.ok) throw new Error('Failed to get upload token');
-      const { uploadUrl, key } = await tokenRes.json();
+      const { uploadUrl, key, objectId } = await tokenRes.json();
 
       // 2. Upload to R2
       const uploadRes = await fetch(uploadUrl, {
@@ -72,6 +72,15 @@ export default function Home() {
       });
 
       if (!uploadRes.ok) throw new Error('Failed to upload file');
+
+      // 3. Complete upload
+      const completeRes = await fetch('/api/upload/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objectId })
+      });
+
+      if (!completeRes.ok) throw new Error('Failed to complete upload');
 
       return key;
     } catch (error) {
