@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       user = JSON.parse(decodeURIComponent(userStr));
     } else {
       // Fallback: fetch from KID if not provided
-      const response = await fetch('https://oauth.koompi.org/v2/oauth/userinfo', {
+      const response = await fetch('https://api.kid.koompi.org/oauth/userinfo', {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
         },
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       }
 
       const data = await response.json();
-      user = data.user;
+      user = data.user ?? data;
     }
 
     const db = getDb();
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         updated_at = CURRENT_TIMESTAMP
     `);
 
-    stmt.run(user._id || user.sub || user.id, user.email, user.fullname, user.profile || user.avatar, user.wallet_address || '');
+    stmt.run(user._id || user.sub || user.id, user.email, user.fullname || user.name, user.profile || user.avatar || user.picture, user.wallet_address || '');
 
     // Create HTML response that stores tokens in localStorage
     const html = `

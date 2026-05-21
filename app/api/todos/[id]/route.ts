@@ -15,7 +15,7 @@ async function getUserFromRequest(request: NextRequest) {
 
   // Verify token with KID
   try {
-    const response = await fetch('https://oauth.koompi.org/v2/oauth/userinfo', {
+    const response = await fetch('https://api.kid.koompi.org/oauth/userinfo', {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -26,7 +26,7 @@ async function getUserFromRequest(request: NextRequest) {
     }
 
     const data = await response.json();
-    return data.user;
+    return data.user ?? data;
   } catch (error) {
     console.error('Token verification failed:', error);
     return null;
