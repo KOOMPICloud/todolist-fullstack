@@ -34,25 +34,32 @@ export async function GET(request: NextRequest) {
       user = data.user ?? data;
     }
 
-    const db = getDb();
+    const db = await getDb();
     if (!db) {
       console.error('Database not initialized');
       return NextResponse.redirect(new URL('/?error=database_error', request.url));
     }
 
     // Upsert user in database
-    const stmt = db.prepare(`
-      INSERT INTO users (koompi_id, email, fullname, avatar, wallet_address)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(koompi_id) DO UPDATE SET
-        email = excluded.email,
-        fullname = excluded.fullname,
-        avatar = excluded.avatar,
-        wallet_address = excluded.wallet_address,
-        updated_at = CURRENT_TIMESTAMP
-    `);
-
-    stmt.run(user._id || user.sub || user.id, user.email, user.fullname || user.name, user.profile || user.avatar || user.picture, user.wallet_address || '');
+    await db.execute({
+      sql: `
+        INSERT INTO users (koompi_id, email, fullname, avatar, wallet_address)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(koompi_id) DO UPDATE SET
+          email = excluded.email,
+          fullname = excluded.fullname,
+          avatar = excluded.avatar,
+          wallet_address = excluded.wallet_address,
+          updated_at = CURRENT_TIMESTAMP
+      `,
+      args: [
+        user._id || user.sub || user.id,
+        user.email,
+        user.fullname || user.name || null,
+        user.profile || user.avatar || user.picture || null,
+        user.wallet_address || '',
+      ],
+    });
 
     // Create HTML response that stores tokens in localStorage
     const html = `

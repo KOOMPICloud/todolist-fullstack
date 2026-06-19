@@ -1,37 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { deleteFile } from '@/lib/storage';
+import { getUserFromRequest } from '@/lib/auth-server';
 
 export const runtime = 'nodejs';
-
-// Get current user from request
-async function getUserFromRequest(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  // Verify token with KID
-  try {
-    const response = await fetch('https://api.kid.koompi.org/oauth/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return data.user ?? data;
-  } catch (error) {
-    console.error('Token verification failed:', error);
-    return null;
-  }
-}
 
 // PUT /api/todos/[id] - Update a todo
 export async function PUT(
@@ -49,7 +21,7 @@ export async function PUT(
     const body = await request.json();
     const { completed, title, imageUrl } = body;
 
-    const db = getDb();
+    const db = await getDb();
     if (!db) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
     }
@@ -57,18 +29,22 @@ export async function PUT(
     // Check if we need to update image
     if (imageUrl !== undefined) {
       // Get current todo to see if there's an old image
-      const currentTodo = db.prepare('SELECT image_url FROM todos WHERE id = ?').get(id) as { image_url: string | null };
+      const current = await db.execute({
+        sql: 'SELECT image_url FROM todos WHERE id = ?',
+        args: [id],
+      });
+      const currentImage = current.rows[0]?.image_url as string | null | undefined;
 
-      if (currentTodo?.image_url && currentTodo.image_url !== imageUrl) {
+      if (currentImage && currentImage !== imageUrl) {
         // Delete old image if it's being replaced or removed
-        console.log(`Deleting old image: ${currentTodo.image_url}`);
-        await deleteFile(currentTodo.image_url);
+        console.log(`Deleting old image: ${currentImage}`);
+        await deleteFile(currentImage);
       }
     }
 
     // Build dynamic update query
-    let updates = [];
-    let values = [];
+    const updates: string[] = [];
+    const values: (string | number | null)[] = [];
 
     if (completed !== undefined) {
       updates.push('completed = ?');
@@ -89,17 +65,18 @@ export async function PUT(
     values.push(id); // For WHERE clause
 
     if (updates.length > 1) { // > 1 because updated_at is always there
-      const stmt = db.prepare(`
-        UPDATE todos
-        SET ${updates.join(', ')}
-        WHERE id = ?
-      `);
-      stmt.run(...values);
+      await db.execute({
+        sql: `UPDATE todos SET ${updates.join(', ')} WHERE id = ?`,
+        args: values,
+      });
     }
 
-    const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(id);
+    const result = await db.execute({
+      sql: 'SELECT * FROM todos WHERE id = ?',
+      args: [id],
+    });
 
-    return NextResponse.json({ todo });
+    return NextResponse.json({ todo: result.rows[0] });
   } catch (error) {
     console.error('Update todo error:', error);
     return NextResponse.json({ error: 'Failed to update todo' }, { status: 500 });
@@ -119,21 +96,27 @@ export async function DELETE(
   }
 
   try {
-    const db = getDb();
+    const db = await getDb();
     if (!db) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
     }
 
     // Get todo first to check for image
-    const todo = db.prepare('SELECT image_url FROM todos WHERE id = ?').get(id) as { image_url: string | null };
+    const current = await db.execute({
+      sql: 'SELECT image_url FROM todos WHERE id = ?',
+      args: [id],
+    });
+    const imageUrl = current.rows[0]?.image_url as string | null | undefined;
 
-    if (todo?.image_url) {
-      console.log(`Deleting image for todo ${id}: ${todo.image_url}`);
-      await deleteFile(todo.image_url);
+    if (imageUrl) {
+      console.log(`Deleting image for todo ${id}: ${imageUrl}`);
+      await deleteFile(imageUrl);
     }
 
-    const stmt = db.prepare('DELETE FROM todos WHERE id = ?');
-    stmt.run(id);
+    await db.execute({
+      sql: 'DELETE FROM todos WHERE id = ?',
+      args: [id],
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

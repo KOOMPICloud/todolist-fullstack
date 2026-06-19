@@ -41,9 +41,6 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Create data directory for SQLite database
-RUN mkdir -p /data/db && chown -R nextjs:nodejs /data/db
-
 # Set permissions
 RUN chown -R nextjs:nodejs /app
 

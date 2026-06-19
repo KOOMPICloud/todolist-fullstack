@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Toaster } from '@/components/ui/sonner';
 
 export const metadata: Metadata = {
   title: 'Todo App - KConsole Template',
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 antialiased">
+        {children}
+        <Toaster richColors position="top-center" />
+      </body>
     </html>
   );
 }

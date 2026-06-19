@@ -1,90 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getUserFromRequest, userId } from '@/lib/auth-server';
 
 export const runtime = 'nodejs';
 
-// Get current user from request
-async function getUserFromRequest(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  // Verify token with KID
-  try {
-    const response = await fetch('https://api.kid.koompi.org/oauth/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return data.user ?? data;
-  } catch (error) {
-    console.error('Token verification failed:', error);
-    return null;
-  }
-}
-
-// GET /api/todos - Get all todos for current user
+// GET /api/todos - Get all todos for the current user
 export async function GET(request: NextRequest) {
   const user = await getUserFromRequest(request);
-
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userId = user._id || user.sub;
-
-  const db = getDb();
+  const db = await getDb();
   if (!db) {
     return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
   }
-  const stmt = db.prepare('SELECT * FROM todos WHERE user_id = ? ORDER BY created_at DESC');
-  const todos = stmt.all(userId);
 
-  return NextResponse.json({ todos });
+  const result = await db.execute({
+    sql: 'SELECT * FROM todos WHERE user_id = ? ORDER BY created_at DESC',
+    args: [userId(user)],
+  });
+
+  return NextResponse.json({ todos: result.rows });
 }
 
 // POST /api/todos - Create a new todo
 export async function POST(request: NextRequest) {
   const user = await getUserFromRequest(request);
-
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userId = user._id || user.sub;
-
   try {
-    const body = await request.json();
-    const { title, imageUrl } = body;
+    const { title, imageUrl } = await request.json();
 
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
-    const id = crypto.randomUUID();
-    const db = getDb();
+    const db = await getDb();
     if (!db) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
     }
-    const stmt = db.prepare(`
-      INSERT INTO todos (id, user_id, title, image_url)
-      VALUES (?, ?, ?, ?)
-    `);
 
-    stmt.run(id, userId, title, imageUrl || null);
+    const id = crypto.randomUUID();
+    await db.execute({
+      sql: 'INSERT INTO todos (id, user_id, title, image_url) VALUES (?, ?, ?, ?)',
+      args: [id, userId(user), title, imageUrl || null],
+    });
 
-    const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(id);
+    const result = await db.execute({
+      sql: 'SELECT * FROM todos WHERE id = ?',
+      args: [id],
+    });
 
-    return NextResponse.json({ todo }, { status: 201 });
+    return NextResponse.json({ todo: result.rows[0] }, { status: 201 });
   } catch (error) {
     console.error('Create todo error:', error);
     return NextResponse.json({ error: 'Failed to create todo' }, { status: 500 });

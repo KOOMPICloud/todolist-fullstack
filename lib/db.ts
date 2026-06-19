@@ -1,93 +1,88 @@
-import Database from 'better-sqlite3';
-import path from 'path';
+import { createClient, type Client } from '@libsql/client';
 
-// Database path - uses persistent volume
-const DB_PATH = process.env.DATABASE_PATH || '/data/db/app.db';
+/**
+ * Turso / libSQL database client.
+ *
+ * Configure with env vars (injected automatically on KConsole):
+ *   DATABASE_URL          e.g. libsql://your-db.turso.io   (or file:./data/dev.db for local)
+ *   DATABASE_AUTH_TOKEN   Turso auth token (not needed for local file: URLs)
+ *
+ * TURSO_DATABASE_URL / TURSO_AUTH_TOKEN are also accepted as aliases.
+ */
+const DB_URL =
+  process.env.DATABASE_URL ||
+  process.env.TURSO_DATABASE_URL ||
+  'file:./data/dev.db';
 
-// Global variable to track if database has been initialized
-let dbInstance: Database.Database | null = null;
-let isInitialized = false;
+const DB_AUTH_TOKEN =
+  process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN;
 
-// Initialize SQLite database
-function initDatabase() {
-  if (isInitialized) {
-    return dbInstance;
-  }
+let clientInstance: Client | null = null;
+let schemaReady: Promise<void> | null = null;
 
-  // Check if we're in build mode to skip database access
-  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.NEXT_PHASE === 'phase-export') {
-    console.log('Build mode detected - skipping database initialization');
-    isInitialized = true;
+function createDbClient(): Client {
+  return createClient({
+    url: DB_URL,
+    authToken: DB_AUTH_TOKEN,
+  });
+}
+
+async function ensureSchema(client: Client): Promise<void> {
+  await client.batch(
+    [
+      `CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        koompi_id TEXT UNIQUE NOT NULL,
+        email TEXT NOT NULL,
+        fullname TEXT,
+        avatar TEXT,
+        wallet_address TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE TABLE IF NOT EXISTS todos (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        completed INTEGER DEFAULT 0,
+        image_url TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed)`,
+    ],
+    'write'
+  );
+}
+
+/**
+ * Get the shared libSQL client, ensuring the schema exists on first use.
+ * Returns null during the production build phase (no DB access at build time).
+ */
+export async function getDb(): Promise<Client | null> {
+  // Skip DB access during the build / export phase.
+  if (
+    process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.NEXT_PHASE === 'phase-export'
+  ) {
     return null;
   }
 
-  // Ensure database directory exists
-  const DB_DIR = path.dirname(DB_PATH);
-  if (!require('fs').existsSync(DB_DIR)) {
-    require('fs').mkdirSync(DB_DIR, { recursive: true });
+  if (!clientInstance) {
+    clientInstance = createDbClient();
   }
 
-  // Initialize SQLite database
-  dbInstance = new Database(DB_PATH);
-
-  // Enable WAL mode for better concurrent access
-  dbInstance.pragma('journal_mode = WAL');
-  dbInstance.pragma('synchronous = NORMAL');
-
-  // Initialize tables
-  dbInstance.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      koompi_id TEXT UNIQUE NOT NULL,
-      email TEXT NOT NULL,
-      fullname TEXT,
-      avatar TEXT,
-      wallet_address TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-
-  dbInstance.exec(`
-    CREATE TABLE IF NOT EXISTS todos (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      title TEXT NOT NULL,
-      completed INTEGER DEFAULT 0,
-      image_url TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(koompi_id) ON DELETE CASCADE
-    );
-  `);
-
-  // Migration: Add image_url if it doesn't exist (for existing DBs)
-  try {
-    const tableInfo = dbInstance.pragma('table_info(todos)') as any[];
-    const hasImageUrl = tableInfo.some(col => col.name === 'image_url');
-    if (!hasImageUrl) {
-      console.log('Migrating: Adding image_url column to todos table');
-      dbInstance.exec('ALTER TABLE todos ADD COLUMN image_url TEXT');
-    }
-  } catch (error) {
-    console.error('Migration failed:', error);
+  if (!schemaReady) {
+    schemaReady = ensureSchema(clientInstance).catch((err) => {
+      // Reset so a later request can retry schema creation.
+      schemaReady = null;
+      throw err;
+    });
   }
+  await schemaReady;
 
-  dbInstance.exec(`
-    CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id);
-    CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed);
-  `);
-
-  console.log('Database initialized');
-  isInitialized = true;
-  return dbInstance;
-}
-
-export function getDb() {
-  if (!isInitialized) {
-    return initDatabase();
-  }
-  return dbInstance;
+  return clientInstance;
 }
 
 export default getDb;
