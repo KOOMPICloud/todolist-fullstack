@@ -25,6 +25,8 @@ COPY .env* ./
 # Build Next.js
 ENV NEXT_PHASE=phase-production-build
 ENV NODE_ENV=production
+# An app without a public/ folder still has one for the copy below
+RUN mkdir -p public
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -40,6 +42,8 @@ RUN adduser --system --uid 1001 nextjs
 # Copy necessary files
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+# public/ is not part of the standalone build: without it every file in it (logos, pictures, scripts) is a 404
+COPY --from=builder /app/public ./public
 
 # Set permissions
 RUN chown -R nextjs:nodejs /app
