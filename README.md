@@ -172,6 +172,23 @@ CREATE TABLE todos (
 5. Token stored in `localStorage` and used for all API calls
 6. User profile is upserted into the database
 
+## Payments
+
+Customers can pay with ABA, ACLEDA, Wing or any KHQR banking app, through KOOMPI Cloud. It is off until
+payments are turned on for the app (Ask AI: "let customers pay", or **Payments** in the KOOMPI Cloud
+dashboard), which sets `KOOMPI_PAY_URL`, `KOOMPI_PAY_KEY` and `KOOMPI_PAY_WEBHOOK_SECRET`. Until then the
+payment card is hidden.
+
+1. `POST /api/payments/checkout { productId }` saves an unpaid order (price from `lib/products.ts`, never
+   from the browser) and returns the payment link.
+2. KOOMPI Cloud sends `payment.paid` to `POST /api/payments/webhook`, signed (`X-KOOMPI-Pay-Signature`);
+   `lib/payments.ts` checks it and the order is marked paid.
+3. The customer comes back with `?payment_id=…`; `GET /api/payments?payment_id=…` asks KOOMPI Cloud,
+   in case the event has not arrived yet.
+
+Previews use a test key: the bank is simulated and no money moves. To sell something else, change
+`lib/products.ts` and `components/todo/support-card.tsx`.
+
 ## Development
 
 ### Database queries

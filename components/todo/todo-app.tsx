@@ -12,6 +12,7 @@ import { AddTodoForm } from '@/components/todo/add-todo-form';
 import { TodoList } from '@/components/todo/todo-list';
 import { LoginCard } from '@/components/todo/login-card';
 import { ImagePreviewDialog } from '@/components/todo/image-preview-dialog';
+import { SupportCard } from '@/components/todo/support-card';
 
 export function TodoApp() {
   const { user, ready } = useAuth();
@@ -58,6 +59,7 @@ export function TodoApp() {
             onDelete={todos.remove}
             onPreview={setPreviewImage}
           />
+          <SupportCard />
         </CardContent>
       </Card>
 

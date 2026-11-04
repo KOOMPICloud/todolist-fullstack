@@ -51,6 +51,21 @@ async function ensureSchema(client: Client): Promise<void> {
       )`,
       `CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id)`,
       `CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed)`,
+      // Orders paid through KOOMPI Cloud (lib/payments.ts): unpaid until the
+      // payment event or a payment lookup says it is paid.
+      `CREATE TABLE IF NOT EXISTS orders (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        product_id TEXT NOT NULL,
+        amount TEXT NOT NULL,
+        currency TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        payment_id TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        paid_at DATETIME
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_payment_id ON orders(payment_id)`,
     ],
     'write'
   );

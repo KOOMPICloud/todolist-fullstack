@@ -107,3 +107,41 @@ const STORAGE_PUBLIC_URL =
 export function imageSrc(key?: string | null): string {
   return key ? `${STORAGE_PUBLIC_URL}/${key}` : '';
 }
+
+export interface Product {
+  id: string;
+  name: string;
+  amount: string;
+  currency: 'USD' | 'KHR';
+  description: string;
+}
+
+export interface Order {
+  id: string;
+  product_id: string;
+  amount: string;
+  currency: 'USD' | 'KHR';
+  status: 'pending' | 'paid' | 'failed';
+  payment_id: string | null;
+  created_at: string;
+  paid_at: string | null;
+}
+
+/** Products and this person's orders; `paymentId` (back from paying) has the server check that payment first. */
+export async function listOrders(
+  paymentId?: string | null
+): Promise<{ enabled: boolean; products: Product[]; orders: Order[] }> {
+  const q = paymentId ? `?payment_id=${encodeURIComponent(paymentId)}` : '';
+  const res = await fetch(`/api/payments${q}`, { headers: authHeaders() });
+  return parse(res, 'Failed to load payments');
+}
+
+/** An unpaid order and the link to pay it (ABA, ACLEDA, Wing or KHQR). */
+export async function checkout(productId: string): Promise<{ orderId: string; checkoutUrl: string }> {
+  const res = await fetch('/api/payments/checkout', {
+    method: 'POST',
+    headers: authHeaders(true),
+    body: JSON.stringify({ productId }),
+  });
+  return parse(res, 'Failed to start the payment');
+}
