@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { KID_USERINFO_URL } from '@/lib/auth-server';
+import { KID_USERINFO_URL, exchangeSignInCode } from '@/lib/auth-server';
 
 export const runtime = 'nodejs';
 
@@ -14,24 +14,32 @@ const forScript = (value: unknown) => JSON.stringify(value)
   .replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 
 /**
- * KOOMPI Cloud's sign-in comes back here with the person's KOOMPI ID tokens
- * (lib/auth.ts login). The user is KOOMPI ID's answer for the token, never
- * the one in the address. The page then hands the sign-in to the window that
- * asked for it (in a popup: to the app or its live preview, then closes; in
- * the same tab: keeps it and goes home), and only for a sign-in this browser
- * started.
+ * KOOMPI Cloud's sign-in comes back here (lib/auth.ts login) with a one-time
+ * code, which this server swaps for the person's KOOMPI ID tokens with the
+ * app's client secret. Older KOOMPI Cloud versions put the tokens in the
+ * address instead; those still work. The user is KOOMPI ID's answer for the
+ * token, never anything in the address. The page then hands the sign-in to
+ * the window that asked for it (in a popup: to the app or its live preview,
+ * then closes; in the same tab: keeps it and goes home), and only for a
+ * sign-in this browser started.
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const accessToken = searchParams.get('access_token');
-  const refreshToken = searchParams.get('refresh_token') ?? '';
+  const code = searchParams.get('code');
+  let accessToken = searchParams.get('access_token');
+  let refreshToken = searchParams.get('refresh_token') ?? '';
   const state = searchParams.get('state') ?? '';
 
-  if (!accessToken) {
-    return NextResponse.redirect(new URL('/?error=no_token', request.url));
-  }
-
   try {
+    if (code) {
+      const tokens = await exchangeSignInCode(code);
+      if (!tokens) return NextResponse.redirect(new URL('/?error=auth_failed', request.url));
+      ({ accessToken, refreshToken } = tokens);
+    }
+    if (!accessToken) {
+      return NextResponse.redirect(new URL('/?error=no_token', request.url));
+    }
+
     const response = await fetch(KID_USERINFO_URL, { headers: { Authorization: `Bearer ${accessToken}` } });
     if (!response.ok) throw new Error(`KOOMPI ID did not accept the token (HTTP ${response.status})`);
     const data = await response.json();

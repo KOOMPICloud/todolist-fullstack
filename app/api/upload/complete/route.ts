@@ -7,7 +7,7 @@ const STORAGE_KEY = process.env.KCONSOLE_STORAGE_KEY;
 const STORAGE_URL = process.env.KCONSOLE_STORAGE_URL || 'https://api-kconsole.koompi.cloud';
 
 // POST /api/upload/complete
-// Confirms upload completion to KConsole Storage
+// Confirms upload completion to KOOMPI Cloud Storage
 export async function POST(request: NextRequest) {
     if (!STORAGE_KEY) {
         return NextResponse.json({ error: 'Storage not configured (Missing KCONSOLE_STORAGE_KEY)' }, { status: 503 });
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'objectId is required' }, { status: 400 });
         }
 
-        // Call KConsole Storage API
+        // Call KOOMPI Cloud Storage API
         const response = await fetch(`${STORAGE_URL}/api/storage/complete`, {
             method: 'POST',
             headers: {

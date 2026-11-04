@@ -64,7 +64,7 @@ export async function deleteTodo(id: string): Promise<void> {
 }
 
 /**
- * Upload an image via KConsole storage's presigned-URL flow:
+ * Upload an image via KOOMPI Cloud storage's presigned-URL flow:
  * request token -> PUT to storage -> confirm completion. Returns the object key.
  */
 export async function uploadImage(file: File): Promise<string> {

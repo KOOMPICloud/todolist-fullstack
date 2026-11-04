@@ -16,9 +16,14 @@ export const SIGN_IN_MESSAGE = 'koompi-sign-in';
 /** How long a sign-in may take before it is no longer taken. */
 const SIGN_IN_TTL_MS = 10 * 60 * 1000;
 
-/** KOOMPI Cloud's sign-in page for this app, carrying the state the callback checks. */
+/**
+ * KOOMPI Cloud's sign-in page for this app, carrying the state the callback
+ * checks. It comes back with a one-time code that only this app's server can
+ * swap for the tokens (app/api/auth/callback), so no token is ever in an
+ * address: browser history, logs or a Referer.
+ */
 export const loginUrl = (state: string) =>
-  `${config.apiBaseUrl}/api/provider/auth/${config.clientId}?state=${encodeURIComponent(state)}${config.redirectUri ? `&redirect_uri=${encodeURIComponent(config.redirectUri)}` : ''}`;
+  `${config.apiBaseUrl}/api/provider/auth/${config.clientId}?state=${encodeURIComponent(state)}&response_type=code${config.redirectUri ? `&redirect_uri=${encodeURIComponent(config.redirectUri)}` : ''}`;
 
 export interface SignIn { accessToken?: string; refreshToken?: string; user?: string; state?: string }
 

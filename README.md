@@ -1,13 +1,13 @@
 # Todo List - Full-Stack Next.js 16 Template
 
-A full-stack todo list application built with Next.js 16 App Router, KConsole Provider OAuth, a Turso (libSQL) database, and a shadcn/ui interface.
+A full-stack todo list application built with Next.js 16 App Router, KOOMPI ID sign-in through KOOMPI Cloud, a Turso (libSQL) database, and a shadcn/ui interface.
 
 ## Features
 
 - ✅ **User Authentication** - KOOMPI ID OAuth integration
 - ✅ **Cloud Database** - Turso (libSQL) — serverless, edge-replicated SQLite
 - ✅ **Modern UI** - shadcn/ui components on Tailwind CSS v4
-- ✅ **Image Uploads** - KConsole object storage (presigned uploads)
+- ✅ **Image Uploads** - KOOMPI Cloud object storage (presigned uploads)
 - ✅ **Full-Stack** - Next.js 16 App Router (API routes + pages)
 - ✅ **Single Container** - Docker standalone deployment on one port
 
@@ -18,7 +18,7 @@ A full-stack todo list application built with Next.js 16 App Router, KConsole Pr
 - **Database**: Turso / libSQL (`@libsql/client`)
 - **UI**: shadcn/ui + Tailwind CSS v4 + lucide-react
 - **Runtime**: Node.js 20+
-- **Authentication**: KConsole Provider OAuth
+- **Authentication**: KOOMPI ID sign-in through KOOMPI Cloud
 - **Deployment**: Docker standalone output
 
 ## Quick Start
@@ -53,10 +53,10 @@ A full-stack todo list application built with Next.js 16 App Router, KConsole Pr
 **Note:** Without real OAuth credentials the login button won't connect to KOOMPI ID,
 but the app and database still run locally.
 
-### Production (KConsole)
+### Production (KOOMPI Cloud)
 
-This template is designed to be deployed on KConsole with one click. When deployed,
-KConsole automatically:
+This template is designed to be deployed on KOOMPI Cloud with one click. When deployed,
+KOOMPI Cloud automatically:
 
 1. Forks this template to your private GitHub repo
 2. Provisions a Turso database and injects `DATABASE_URL` / `DATABASE_AUTH_TOKEN`
@@ -66,12 +66,12 @@ KConsole automatically:
 
 ## Environment Variables
 
-When deployed on KConsole these are injected automatically:
+When deployed on KOOMPI Cloud these are injected automatically:
 
 ```env
 NEXT_PUBLIC_KOOMPI_PROVIDER_CLIENT_ID=kcp_xxx
-NEXT_PUBLIC_KOOMPI_PROVIDER_CLIENT_SECRET=xxx
-NEXT_PUBLIC_KOOMPI_PROVIDER_REDIRECT_URI=https://yourapp.tunnel.koompi.cloud/auth/callback
+KOOMPI_PROVIDER_CLIENT_SECRET=xxx   # server only: swaps the sign-in code for the tokens
+NEXT_PUBLIC_KOOMPI_PROVIDER_REDIRECT_URI=https://yourapp.tunnel.koompi.cloud/api/auth/callback
 NEXT_PUBLIC_KOOMPI_API_BASE_URL=https://api-kconsole.koompi.cloud
 
 # Turso / libSQL
@@ -166,9 +166,9 @@ CREATE TABLE todos (
 ## Authentication Flow
 
 1. User clicks "Login with KOOMPI ID"
-2. Redirected to KConsole Provider OAuth
+2. KOOMPI Cloud sends them to KOOMPI ID (a popup; the same tab where popups are blocked)
 3. User authenticates with KOOMPI ID
-4. Redirected back to the app with an access token
+4. Back at the app with a one-time code, which its server swaps for the token with its client secret
 5. Token stored in `localStorage` and used for all API calls
 6. User profile is upserted into the database
 
@@ -230,6 +230,6 @@ MIT License - Feel free to use this template for your projects!
 
 ## Support
 
-- Deployed on [KConsole](https://kconsole.koompi.cloud)
+- Deployed on [KOOMPI Cloud](https://kconsole.koompi.cloud)
 - Authentication by [KOOMPI ID](https://oauth.koompi.org)
 - Templates by [KOOMPICloud](https://github.com/KOOMPICloud)

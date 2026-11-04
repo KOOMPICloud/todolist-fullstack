@@ -3,7 +3,7 @@ import { createClient, type Client } from '@libsql/client';
 /**
  * Turso / libSQL database client.
  *
- * Configure with env vars (injected automatically on KConsole):
+ * Configure with env vars (injected automatically on KOOMPI Cloud):
  *   DATABASE_URL          e.g. libsql://your-db.turso.io   (or file:./data/dev.db for local)
  *   DATABASE_AUTH_TOKEN   Turso auth token (not needed for local file: URLs)
  *

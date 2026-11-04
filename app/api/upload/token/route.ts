@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 // Config
-// In KConsole deployment, these are injected automatically
+// In KOOMPI Cloud deployment, these are injected automatically
 const STORAGE_KEY = process.env.KCONSOLE_STORAGE_KEY;
 const STORAGE_URL = process.env.KCONSOLE_STORAGE_URL || 'https://api-kconsole.koompi.cloud';
 
 // POST /api/upload/token
-// Requests a presigned URL from KConsole Storage
+// Requests a presigned URL from KOOMPI Cloud Storage
 export async function POST(request: NextRequest) {
     if (!STORAGE_KEY) {
         return NextResponse.json({ error: 'Storage not configured (Missing KCONSOLE_STORAGE_KEY)' }, { status: 503 });
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Filename and size are required' }, { status: 400 });
         }
 
-        // Call KConsole Storage API
+        // Call KOOMPI Cloud Storage API
         const response = await fetch(`${STORAGE_URL}/api/storage/upload-token`, {
             method: 'POST',
             headers: {

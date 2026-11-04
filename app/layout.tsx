@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from '@/components/ui/sonner';
 
 export const metadata: Metadata = {
-  title: 'Todo App - KConsole Template',
-  description: 'Full-stack todo application with KConsole Provider OAuth',
+  title: 'Todo App - KOOMPI Cloud Template',
+  description: 'Full-stack todo application with KOOMPI ID sign-in through KOOMPI Cloud',
 };
 
 export default function RootLayout({

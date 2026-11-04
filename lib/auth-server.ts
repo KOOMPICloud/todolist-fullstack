@@ -6,6 +6,37 @@ import type { AuthUser } from '@/lib/types';
 export const KID_USERINFO_URL = process.env.KOOMPI_ID_USERINFO_URL || 'https://api.kid.koompi.org/oauth/userinfo';
 
 /**
+ * Swap the one-time code KOOMPI Cloud's sign-in hands back (lib/auth.ts
+ * loginUrl) for the person's KOOMPI ID tokens. It takes this app's client
+ * secret, which only the server has. null when KOOMPI Cloud refuses it: a
+ * wrong, used or expired code (2 minutes), or no secret here.
+ */
+export async function exchangeSignInCode(code: string): Promise<{ accessToken: string; refreshToken: string } | null> {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_KOOMPI_API_BASE_URL || 'https://api-kconsole.koompi.cloud';
+  const clientId = process.env.NEXT_PUBLIC_KOOMPI_PROVIDER_CLIENT_ID || '';
+  // Apps made before the secret became server-only have it under its old name.
+  const clientSecret = process.env.KOOMPI_PROVIDER_CLIENT_SECRET || process.env.NEXT_PUBLIC_KOOMPI_PROVIDER_CLIENT_SECRET || '';
+  const redirectUri = process.env.NEXT_PUBLIC_KOOMPI_PROVIDER_REDIRECT_URI || '';
+  if (!clientId || !clientSecret) {
+    console.error('Sign-in: KOOMPI_PROVIDER_CLIENT_SECRET is not set, so the sign-in code cannot be swapped for a token');
+    return null;
+  }
+  const response = await fetch(`${apiBaseUrl}/api/provider/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, ...(redirectUri && { redirect_uri: redirectUri }) }),
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    console.error(`Sign-in: KOOMPI Cloud did not take the code (HTTP ${response.status})`);
+    return null;
+  }
+  const data = await response.json();
+  if (typeof data.access_token !== 'string' || !data.access_token) return null;
+  return { accessToken: data.access_token, refreshToken: typeof data.refresh_token === 'string' ? data.refresh_token : '' };
+}
+
+/**
  * KOOMPI Cloud's previews are signed in as this test person, so the AI can
  * try the signed-in screens: a preview (never a deployed app) has
  * KOOMPI_PREVIEW_TOKEN, a new random token of its own, and its browser sends
