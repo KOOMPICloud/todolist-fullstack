@@ -2,7 +2,8 @@ import { timingSafeEqual } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import type { AuthUser } from '@/lib/types';
 
-const KID_USERINFO_URL = 'https://api.kid.koompi.org/oauth/userinfo';
+/** KOOMPI ID's userinfo, which says whose a token is (another address only for a test of the sign-in). */
+export const KID_USERINFO_URL = process.env.KOOMPI_ID_USERINFO_URL || 'https://api.kid.koompi.org/oauth/userinfo';
 
 /**
  * KOOMPI Cloud's previews are signed in as this test person, so the AI can

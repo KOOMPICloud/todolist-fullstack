@@ -1,5 +1,6 @@
 /**
- * KConsole Provider OAuth Configuration
+ * Sign in with KOOMPI ID, through KOOMPI Cloud (set up for the app when it is
+ * deployed or previewed there).
  */
 
 export const config = {
@@ -8,52 +9,102 @@ export const config = {
   apiBaseUrl: process.env.NEXT_PUBLIC_KOOMPI_API_BASE_URL || 'https://api-kconsole.koompi.cloud',
 };
 
+/** The sign-in this browser started (its state and when): the callback keeps only that one. */
+export const PENDING_SIGN_IN = 'koompi_sign_in';
+/** How the callback (app/api/auth/callback) hands the sign-in back to the window that asked for it. */
+export const SIGN_IN_MESSAGE = 'koompi-sign-in';
+/** How long a sign-in may take before it is no longer taken. */
+const SIGN_IN_TTL_MS = 10 * 60 * 1000;
+
+/** KOOMPI Cloud's sign-in page for this app, carrying the state the callback checks. */
+export const loginUrl = (state: string) =>
+  `${config.apiBaseUrl}/api/provider/auth/${config.clientId}?state=${encodeURIComponent(state)}${config.redirectUri ? `&redirect_uri=${encodeURIComponent(config.redirectUri)}` : ''}`;
+
+export interface SignIn { accessToken?: string; refreshToken?: string; user?: string; state?: string }
+
 /**
- * Start OAuth login flow
+ * Keep a sign-in handed back by the callback, if this browser started it (its
+ * state, within 10 minutes). True when kept.
+ */
+export function acceptSignIn(data: SignIn): boolean {
+  if (typeof window === 'undefined' || !data?.accessToken) return false;
+  let pending: { state?: string; at?: number } | null = null;
+  try { pending = JSON.parse(window.localStorage.getItem(PENDING_SIGN_IN) ?? 'null'); } catch { pending = null; }
+  if (!pending?.state || !pending.at || Date.now() - pending.at > SIGN_IN_TTL_MS) return false;
+  // KOOMPI Cloud hands the state back (older versions did not): when it does, it must be this one.
+  if (data.state && data.state !== pending.state) return false;
+  window.localStorage.setItem('access_token', data.accessToken);
+  window.localStorage.setItem('refresh_token', data.refreshToken ?? '');
+  window.localStorage.setItem('user', data.user ?? 'null');
+  window.localStorage.removeItem(PENDING_SIGN_IN);
+  return true;
+}
+
+/**
+ * Sign in with KOOMPI ID, in a popup: KOOMPI ID's page can't open inside a
+ * frame (KOOMPI Cloud's live preview shows the app in one), and the app keeps
+ * its place. The callback hands the sign-in back to this window, which
+ * reloads signed in. Where popups are blocked, the whole page goes to KOOMPI
+ * ID and comes back instead (inside a frame it can't: it says to allow them).
  */
 export const login = () => {
-  console.log('[Auth] Config:', config);
-
-  if (!config.clientId) {
-    console.error('[Auth] KOOMPI_PROVIDER_CLIENT_ID not configured');
-    alert('OAuth not configured. Please ensure this app is deployed on KConsole.');
+  if (typeof window === 'undefined') return;
+  if (!config.clientId || !config.apiBaseUrl) {
+    alert('Sign-in is not set up yet: it is, once the app is deployed or previewed on KOOMPI Cloud.');
     return;
   }
-
-  if (!config.apiBaseUrl) {
-    console.error('[Auth] KOOMPI_API_BASE_URL not configured');
-    alert('API Base URL not configured.');
-    return;
-  }
-
-  console.log('[Auth] Starting OAuth flow');
-  console.log('[Auth] clientId:', config.clientId);
-  console.log('[Auth] apiBaseUrl:', config.apiBaseUrl);
-
-  // Generate state for CSRF protection
   const state = crypto.randomUUID();
+  const framed = window.self !== window.top;
+  window.localStorage.setItem(PENDING_SIGN_IN, JSON.stringify({ state, at: Date.now(), popup: true }));
+  const url = loginUrl(state);
 
-  // Store state in sessionStorage (browser only)
-  if (typeof window !== 'undefined' && window.sessionStorage) {
-    window.sessionStorage.setItem('oauth_state', state);
-  }
-
-  // Redirect to KConsole Provider OAuth
-  const loginUrl = `${config.apiBaseUrl}/api/provider/auth/${config.clientId}?state=${state}${config.redirectUri ? `&redirect_uri=${encodeURIComponent(config.redirectUri)}` : ''
-    }`;
-  console.log('[Auth] Login URL:', loginUrl);
-
-  // Verify URL format
-  try {
-    new URL(loginUrl);
-    console.log('[Auth] Redirecting to KConsole...');
-    if (typeof window !== 'undefined') {
-      window.location.href = loginUrl;
+  const width = 480;
+  const height = 680;
+  const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+  const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+  const popup = window.open(url, SIGN_IN_MESSAGE, `popup=yes,width=${width},height=${height},left=${left},top=${top}`);
+  if (!popup) {
+    if (framed) {
+      window.localStorage.removeItem(PENDING_SIGN_IN);
+      alert('Allow pop-ups for this page to sign in with KOOMPI ID, or open the app in its own tab.');
+      return;
     }
-  } catch (error) {
-    console.error('[Auth] Invalid URL:', loginUrl, error);
-    alert('Invalid login URL. Check console for details.');
+    window.localStorage.setItem(PENDING_SIGN_IN, JSON.stringify({ state, at: Date.now() }));
+    window.location.href = url;
+    return;
   }
+
+  // The callback says so by a message to this window, a broadcast to the app's windows, or by
+  // keeping the sign-in itself (then this window sees access_token change). Any of them will do:
+  // a page on the way to KOOMPI ID can cut the popup's link to this window.
+  let finished = false;
+  const channel = 'BroadcastChannel' in window ? new BroadcastChannel(SIGN_IN_MESSAGE) : null;
+  const done = () => {
+    if (finished) return;
+    finished = true;
+    window.removeEventListener('message', onMessage);
+    window.removeEventListener('storage', onStorage);
+    channel?.close();
+    clearTimeout(giveUp);
+    window.location.reload();
+  };
+  const take = (data: SignIn) => {
+    if (acceptSignIn(data) || isAuthenticated()) done();
+  };
+  const onMessage = (event: MessageEvent) => {
+    if (event.origin === window.location.origin && event.data?.type === SIGN_IN_MESSAGE) take(event.data);
+  };
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === 'access_token' && event.newValue) done();
+  };
+  window.addEventListener('message', onMessage);
+  window.addEventListener('storage', onStorage);
+  if (channel) channel.onmessage = (event) => take(event.data);
+  const giveUp = setTimeout(() => {
+    window.removeEventListener('message', onMessage);
+    window.removeEventListener('storage', onStorage);
+    channel?.close();
+  }, SIGN_IN_TTL_MS);
 };
 
 /**
