@@ -1,7 +1,30 @@
+import { timingSafeEqual } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import type { AuthUser } from '@/lib/types';
 
 const KID_USERINFO_URL = 'https://api.kid.koompi.org/oauth/userinfo';
+
+/**
+ * KOOMPI Cloud's previews are signed in as this test person, so the AI can
+ * try the signed-in screens: a preview (never a deployed app) has
+ * KOOMPI_PREVIEW_TOKEN, a new random token of its own, and its browser sends
+ * it as its access token. A deployed app has no such variable, so this
+ * signs no one in there.
+ */
+const PREVIEW_USER: AuthUser = {
+  _id: 'koompi-preview',
+  sub: 'koompi-preview',
+  email: 'preview@koompi.cloud',
+  fullname: 'Preview Tester',
+};
+
+function isPreviewToken(token: string): boolean {
+  const expected = process.env.KOOMPI_PREVIEW_TOKEN;
+  if (!expected || expected.length < 32) return false;
+  const given = Buffer.from(token);
+  const wanted = Buffer.from(expected);
+  return given.length === wanted.length && timingSafeEqual(given, wanted);
+}
 
 /**
  * Verify the Bearer token on a request against KOOMPI ID and return the user,
@@ -16,6 +39,9 @@ export async function getUserFromRequest(
   }
 
   const token = authHeader.slice('Bearer '.length);
+  if (isPreviewToken(token)) {
+    return PREVIEW_USER;
+  }
 
   try {
     const response = await fetch(KID_USERINFO_URL, {
