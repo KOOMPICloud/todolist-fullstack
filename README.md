@@ -17,7 +17,7 @@ A full-stack todo list application built with Next.js 16 App Router, KOOMPI ID s
 - **React**: 19
 - **Database**: Turso / libSQL (`@libsql/client`)
 - **UI**: shadcn/ui + Tailwind CSS v4 + lucide-react
-- **Runtime**: Node.js 20+
+- **Runtime**: Node.js 24 (LTS)
 - **Authentication**: KOOMPI ID sign-in through KOOMPI Cloud
 - **Deployment**: Docker standalone output
 
@@ -217,7 +217,7 @@ npx shadcn@latest add <component>
 The Dockerfile uses Next.js standalone output:
 
 - Multi-stage build for a small image
-- Node.js 20 Alpine base
+- Node.js 24 Alpine base
 - Non-root user
 - Health check endpoint on `/api/health`
 - Exposes port 3000

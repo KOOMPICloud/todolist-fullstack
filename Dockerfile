@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for Next.js Full-Stack Application
 # Single container serving both API and frontend
 
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -38,15 +38,16 @@ ENV PORT 3000
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+# The app's folder is its user's, and the files are copied as theirs (--chown):
+# a `RUN chown -R` after the copies stored every file a second time, about
+# 90 MB more to push and pull on every deploy.
+RUN chown nextjs:nodejs /app
 
 # Copy necessary files
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # public/ is not part of the standalone build: without it every file in it (logos, pictures, scripts) is a 404
-COPY --from=builder /app/public ./public
-
-# Set permissions
-RUN chown -R nextjs:nodejs /app
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
 

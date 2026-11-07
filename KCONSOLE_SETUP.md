@@ -44,5 +44,5 @@ Image uploads use KOOMPI Cloud object storage via presigned URLs:
 - **Framework**: Next.js 16 with App Router
 - **Database**: Turso / libSQL (`@libsql/client`)
 - **UI**: shadcn/ui + Tailwind CSS v4
-- **Runtime**: Node.js 20+
+- **Runtime**: Node.js 24 (LTS)
 - **Deployment**: Docker (standalone output)
