@@ -37,6 +37,9 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV PORT 3000
+# Listen on every address: Next.js standalone otherwise listens on the container's hostname only,
+# which the HEALTHCHECK below (on the container's own loopback) never reaches.
+ENV HOSTNAME=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -57,8 +60,10 @@ EXPOSE 3000
 
 ENV PORT 3000
 
-# Health check
+# Health check. It exits as soon as the answer comes: Node keeps an HTTP connection open for the
+# next request, so a check that waits for that runs past its 3 s and counts as failed.
+# 127.0.0.1, not localhost (which can be ::1, where the server doesn't listen).
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => { if (r.statusCode !== 200) throw new Error('Health check failed') })"
+  CMD node -e "require('http').get('http://127.0.0.1:3000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 CMD ["node", "server.js"]
