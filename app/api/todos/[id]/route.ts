@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { deleteFile } from '@/lib/storage';
-import { getUserFromRequest } from '@/lib/auth-server';
+import { getUserFromRequest, userId } from '@/lib/auth-server';
 
 export const runtime = 'nodejs';
 
@@ -45,17 +45,20 @@ export async function PUT(
       values.push(imageUrl);
     }
 
+    // Only the signed-in person's own todo: every query here has AND user_id = ?.
+    const uid = userId(user);
+
     if (updates.length === 0) {
       // Nothing to change: the todo as it is.
-      const result = await db.execute({ sql: 'SELECT * FROM todos WHERE id = ?', args: [id] });
+      const result = await db.execute({ sql: 'SELECT * FROM todos WHERE id = ? AND user_id = ?', args: [id, uid] });
       return NextResponse.json({ todo: result.rows[0] });
     }
 
     updates.push('updated_at = CURRENT_TIMESTAMP');
     // RETURNING * gives back the changed row in the same trip: no SELECT after it.
     const update = {
-      sql: `UPDATE todos SET ${updates.join(', ')} WHERE id = ? RETURNING *`,
-      args: [...values, id],
+      sql: `UPDATE todos SET ${updates.join(', ')} WHERE id = ? AND user_id = ? RETURNING *`,
+      args: [...values, id, uid],
     };
 
     if (imageUrl === undefined) {
@@ -66,7 +69,7 @@ export async function PUT(
     // A new or no image: the image it had and the change, in one trip (one
     // transaction, in order, so the SELECT sees the old image).
     const [before, result] = await db.batch(
-      [{ sql: 'SELECT image_url FROM todos WHERE id = ?', args: [id] }, update],
+      [{ sql: 'SELECT image_url FROM todos WHERE id = ? AND user_id = ?', args: [id, uid] }, update],
       'write'
     );
     const currentImage = before.rows[0]?.image_url as string | null | undefined;
@@ -102,10 +105,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
     }
 
-    // RETURNING gives back the deleted row's image in the same trip.
+    // Only the signed-in person's own todo; RETURNING gives back its image in the same trip.
     const result = await db.execute({
-      sql: 'DELETE FROM todos WHERE id = ? RETURNING image_url',
-      args: [id],
+      sql: 'DELETE FROM todos WHERE id = ? AND user_id = ? RETURNING image_url',
+      args: [id, userId(user)],
     });
     const imageUrl = result.rows[0]?.image_url as string | null | undefined;
 
