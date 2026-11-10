@@ -11,7 +11,9 @@ WORKDIR /app
 
 # Install dependencies
 COPY package.json package-lock.json* ./
-RUN npm ci
+# npm's download cache stays on the build server between builds (any app): when a package is added, only
+# the new ones are downloaded. npm checks each package against package-lock.json's hashes.
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 
 # Rebuild the source code only when needed
 FROM base AS builder
