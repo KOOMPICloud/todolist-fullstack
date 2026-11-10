@@ -79,6 +79,9 @@ Every list: loading (`ListSkeleton`), empty (`EmptyState` with the button that f
 
 KOOMPI Cloud's design_app adds `design.css`: its colors, fonts and corners reach every component through the same variables. By hand, change a token in `app/globals.css` (`--primary`, `--radius`) in both `:root` and `.dark`, keeping its contrast.
 
+- Add to `app/globals.css`, never replace it: its `@import`s, the tokens in `:root` and `.dark`, and `@theme inline` are where every component's classes come from. Your own styles go after them, or in a stylesheet of your own imported with `./` (`@import './shop.css';`: without `./` Tailwind looks for a package).
+- Import only packages in `package.json` (add one with install_packages first). Never `shadcn/tailwind.css`: this app has no `shadcn` package, and `globals.css` already has what its components need.
+
 ---
 
 Some rules are adapted from the Stageshow skill in [benjitaylor/skills](https://github.com/benjitaylor/skills) (MIT License, Copyright (c) 2026 Benji Taylor).
