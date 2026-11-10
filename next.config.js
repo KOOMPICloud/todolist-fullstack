@@ -23,6 +23,12 @@ const nextConfig = {
   // the first request to an API route waited about 30 ms for one.
   serverExternalPackages: ['undici'],
   experimental: { cpus: buildCpus() },
+  // sharp is only for Next.js's image optimizer, which this app doesn't use
+  // (images.unoptimized below): left out of the server's files, every deploy
+  // pushes and pulls about 47 MB less (sharp's two copies of libvips; the
+  // packages went from 28.5 to 11.8 MB compressed). Turning the optimizer on
+  // needs it back: remove this line with unoptimized.
+  outputFileTracingExcludes: { '*': ['node_modules/sharp/**', 'node_modules/@img/**'] },
   images: {
     // Serve images straight from object storage — the client fetches them
     // directly instead of routing through the Next.js image optimizer.
