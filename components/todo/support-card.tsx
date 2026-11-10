@@ -76,8 +76,8 @@ export function SupportCard() {
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
-      <div className="min-w-0">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-4">
+      <div className="min-w-0 flex-1">
         <p className="font-medium">{paid ? `You're a ${product.name.toLowerCase()}. Thank you!` : product.description}</p>
         <p className="text-sm text-muted-foreground">
           {paid
@@ -86,8 +86,8 @@ export function SupportCard() {
         </p>
       </div>
       {!paid && (
-        <Button onClick={buy} disabled={busy}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : <Heart className="size-4" />}
+        <Button variant="tinted" onClick={buy} disabled={busy}>
+          {busy ? <Loader2 className="animate-spin" /> : <Heart />}
           Pay {price(product.amount, product.currency)}
         </Button>
       )}

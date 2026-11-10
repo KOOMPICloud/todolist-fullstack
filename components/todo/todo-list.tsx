@@ -1,7 +1,7 @@
 'use client';
 
 import type { Todo } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
+import { List, ListSkeleton } from '@/components/ui/list';
 import { TodoItem } from '@/components/todo/todo-item';
 
 interface TodoListProps {
@@ -23,26 +23,11 @@ export function TodoList({
   onDelete,
   onPreview,
 }: TodoListProps) {
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-14 w-full" />
-        ))}
-      </div>
-    );
-  }
-
-  if (todos.length === 0) {
-    return (
-      <div className="py-12 text-center text-muted-foreground">
-        No todos yet. Add one above!
-      </div>
-    );
-  }
+  // Loading: rows of the real rows' shape, never a blank screen.
+  if (loading) return <ListSkeleton />;
 
   return (
-    <ul className="space-y-2">
+    <List>
       {todos.map((todo) => (
         <TodoItem
           key={todo.id}
@@ -54,6 +39,6 @@ export function TodoList({
           onPreview={onPreview}
         />
       ))}
-    </ul>
+    </List>
   );
 }

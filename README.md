@@ -1,12 +1,12 @@
 # Todo List - Full-Stack Next.js 16 Template
 
-A full-stack todo list application built with Next.js 16 App Router, KOOMPI ID sign-in through KOOMPI Cloud, a Turso (libSQL) database, and a shadcn/ui interface.
+A full-stack todo list application built with Next.js 16 App Router, KOOMPI ID sign-in through KOOMPI Cloud, a Turso (libSQL) database, and a small mobile-first UI kit (`components/ui`, shadcn-based) with light and dark themes. How its screens are built: [DESIGN.md](DESIGN.md).
 
 ## Features
 
 - ✅ **User Authentication** - KOOMPI ID OAuth integration
 - ✅ **Cloud Database** - Turso (libSQL) — serverless, edge-replicated SQLite
-- ✅ **Modern UI** - shadcn/ui components on Tailwind CSS v4
+- ✅ **Mobile-first UI** - a tab bar on phones and a side bar on wide screens, lists, sheets, fields, day and time chips, light and dark ([DESIGN.md](DESIGN.md))
 - ✅ **Image Uploads** - KOOMPI Cloud object storage (presigned uploads)
 - ✅ **Full-Stack** - Next.js 16 App Router (API routes + pages)
 - ✅ **Single Container** - Docker standalone deployment on one port
@@ -96,11 +96,14 @@ todolist-fullstack/
 │   │   ├── todos/          # CRUD endpoints (+ [id])
 │   │   ├── auth/callback/  # OAuth callback handler
 │   │   └── upload/         # Presigned upload token + complete
-│   ├── layout.tsx          # Root layout (+ Toaster)
+│   ├── layout.tsx          # Root layout: AppShell (the tabs), the theme script, Toaster
+│   ├── theme-script.ts     # Light/dark, set before the page draws
 │   ├── page.tsx            # Thin entry — renders <TodoApp/>
-│   └── globals.css         # Tailwind v4 + shadcn theme
+│   ├── account/page.tsx    # The Account tab
+│   └── globals.css         # Design tokens (colors, type, corners), light and dark
 ├── components/
-│   ├── ui/                 # shadcn/ui primitives
+│   ├── ui/                 # The UI kit: AppShell, Screen, List, Sheet, Field, ChoiceChips… (DESIGN.md)
+│   ├── account-screen.tsx
 │   └── todo/               # Feature components
 │       ├── todo-app.tsx        # Client container (wires hooks)
 │       ├── login-card.tsx
@@ -117,10 +120,12 @@ todolist-fullstack/
 │   ├── auth-server.ts      # Bearer-token verification (API routes)
 │   ├── api.ts              # Client-side API + upload helpers
 │   ├── storage.ts          # Object storage helpers
+│   ├── format.ts           # Dates, times and money (Phnom Penh time, $ and ៛)
 │   ├── types.ts            # Shared types
 │   └── utils.ts            # cn() helper
 ├── instrumentation.ts      # Connects to the database as the server starts
 ├── scripts/init-db.mjs     # Schema init / migration script
+├── DESIGN.md               # How the screens are built: read before changing one
 ├── components.json         # shadcn config
 ├── package.json
 ├── tsconfig.json
@@ -228,11 +233,9 @@ const [todos, orders] = await db!.batch([
 ], 'read');
 ```
 
-### Adding shadcn components
+### Building screens
 
-```bash
-npx shadcn@latest add <component>
-```
+Compose them from `components/ui` as [DESIGN.md](DESIGN.md) says: a `Screen` per page, its tab in `app/layout.tsx`, `List` rows, a `Sheet` for each form. More shadcn components can be added (`npx shadcn@latest add <component>`); restyle them with the tokens in `app/globals.css`.
 
 ## Deployment
 
