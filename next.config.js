@@ -18,9 +18,9 @@ function buildCpus() {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  // undici (lib/db.ts) is loaded from node_modules, once, as the server starts:
-  // bundled, each part of the server had its own copy, and the first request to
-  // an API route waited about 30 ms for one.
+  // undici (lib/db.ts, lib/auth-server.ts) is loaded from node_modules, once, as
+  // the server starts: bundled, each part of the server had its own copy, and
+  // the first request to an API route waited about 30 ms for one.
   serverExternalPackages: ['undici'],
   experimental: { cpus: buildCpus() },
   images: {

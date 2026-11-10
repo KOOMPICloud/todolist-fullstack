@@ -1,9 +1,18 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { NextRequest } from 'next/server';
+import { Agent, fetch as fetchKeepingConnections } from 'undici';
 import type { AuthUser } from '@/lib/types';
 
 /** KOOMPI ID's userinfo, which says whose a token is (another address only for a test of the sign-in). */
 export const KID_USERINFO_URL = process.env.KOOMPI_ID_USERINFO_URL || 'https://api.kid.koompi.org/oauth/userinfo';
+
+/**
+ * Every API request asks KOOMPI ID whose its token is. Node's fetch closes an
+ * idle connection after 4 s (KOOMPI ID keeps it 75 s), and a new one made
+ * that question about 0.1 s slower, at times 0.4 s, from Singapore: so the
+ * connections to it are kept open 30 s between requests.
+ */
+const kidConnections = new Agent({ keepAliveTimeout: 30_000, keepAliveMaxTimeout: 30_000 });
 
 /**
  * Swap the one-time code KOOMPI Cloud's sign-in hands back (lib/auth.ts
@@ -76,13 +85,15 @@ export async function getUserFromRequest(
   }
 
   try {
-    const response = await fetch(KID_USERINFO_URL, {
+    const response = await fetchKeepingConnections(KID_USERINFO_URL, {
       headers: { Authorization: `Bearer ${token}` },
+      dispatcher: kidConnections,
     });
     if (!response.ok) {
+      await response.text(); // read to the end, so the connection can take the next request
       return null;
     }
-    const data = await response.json();
+    const data = (await response.json()) as { user?: AuthUser } & AuthUser;
     return (data.user ?? data) as AuthUser;
   } catch (error) {
     console.error('Token verification failed:', error);
