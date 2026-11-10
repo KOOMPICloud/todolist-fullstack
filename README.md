@@ -217,6 +217,10 @@ as fast as the number of trips it makes:
 - An index in `SCHEMA` (lib/db.ts) for every new WHERE or ORDER BY.
 - No queries in a loop: `IN (...)`, a JOIN, or one batch.
 
+The client also keeps its connections open for a minute after each query (`keepWarm` in lib/db.ts):
+Turso closes an idle one after 5 s, and a new one made the first query after a pause 0.3 s instead
+of 0.075 s. An app idle for longer makes no requests.
+
 ```typescript
 const [todos, orders] = await db!.batch([
   { sql: 'SELECT * FROM todos WHERE user_id = ? ORDER BY created_at DESC', args: [userId] },

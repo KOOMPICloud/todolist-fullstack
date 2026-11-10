@@ -18,6 +18,10 @@ function buildCpus() {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // undici (lib/db.ts) is loaded from node_modules, once, as the server starts:
+  // bundled, each part of the server had its own copy, and the first request to
+  // an API route waited about 30 ms for one.
+  serverExternalPackages: ['undici'],
   experimental: { cpus: buildCpus() },
   images: {
     // Serve images straight from object storage — the client fetches them

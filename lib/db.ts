@@ -1,4 +1,5 @@
 import { createClient, type Client } from '@libsql/client';
+import { fetch as undiciFetch } from 'undici';
 
 /**
  * Turso / libSQL database client.
@@ -81,6 +82,7 @@ const SCHEMA = [
 const shared = globalThis as typeof globalThis & {
   __koompiDb?: Client;
   __koompiDbSchema?: { statements: string; ready: Promise<void> };
+  __koompiDbWarm?: { lastUse: number; timer?: ReturnType<typeof setTimeout> };
 };
 const statements = SCHEMA.join(';\n');
 
@@ -98,6 +100,59 @@ function ensureSchema(client: Client): Promise<void> {
     shared.__koompiDbSchema = { statements, ready };
   }
   return shared.__koompiDbSchema.ready;
+}
+
+// Keep the connections open between requests. Turso closes one that has had
+// no request for 5 s (Node's fetch closes its own side after 4 s), and a new
+// one takes three more trips: after a pause of 5 s or more, a query took 0.3 s
+// instead of 0.075 s from Singapore. So for a minute after the app last used
+// the database, two requests to the database's /health every 3 s (no SQL:
+// nothing to pay for) keep two connections open: one for the next request,
+// one for a request alongside it or a second trip right after it. After a
+// minute without a query it stops: an idle app makes no requests, no timer.
+const WARM_FOR_MS = 60_000;
+const WARM_EVERY_MS = 3_000;
+const WARM_URL = healthUrl(DB_URL);
+
+/** A Turso database's /health (libsql:// or https://), or null: a file or a local server needs no keeping open. */
+function healthUrl(url: string): string | null {
+  try {
+    const { protocol, host, searchParams } = new URL(url);
+    if ((protocol === 'libsql:' || protocol === 'https:') && searchParams.get('tls') !== '0') {
+      return `https://${host}/health`;
+    }
+  } catch {
+    // Not a URL: a file path.
+  }
+  return null;
+}
+
+function keepWarm(url: string) {
+  const warm = (shared.__koompiDbWarm ??= { lastUse: 0 });
+  warm.timer = setTimeout(() => {
+    if (Date.now() - warm.lastUse > WARM_FOR_MS) {
+      warm.timer = undefined;
+      return;
+    }
+    // undici's fetch, not Next.js's: never cached or merged into one. It uses
+    // the same connections as the client's fetch.
+    for (let i = 0; i < 2; i++) {
+      undiciFetch(url).then((r) => r.arrayBuffer()).catch(() => undefined);
+    }
+    keepWarm(url);
+  }, WARM_EVERY_MS);
+  // It never keeps the process running (a script, a build).
+  warm.timer.unref();
+}
+
+/** The client's own fetch, which also counts each database request as a use and starts keepWarm if it isn't running. */
+function countingUses(baseFetch: typeof fetch) {
+  return (request: Request): Promise<Response> => {
+    const warm = (shared.__koompiDbWarm ??= { lastUse: 0 });
+    warm.lastUse = Date.now();
+    if (WARM_URL && !warm.timer) keepWarm(WARM_URL);
+    return baseFetch(request);
+  };
 }
 
 /**
@@ -118,6 +173,7 @@ export async function getDb(): Promise<Client | null> {
   const client = (shared.__koompiDb ??= createClient({
     url: DB_URL,
     authToken: DB_AUTH_TOKEN,
+    fetch: countingUses(globalThis.fetch),
   }));
 
   await ensureSchema(client);
