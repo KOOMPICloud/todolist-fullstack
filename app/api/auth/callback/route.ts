@@ -13,6 +13,9 @@ const forScript = (value: unknown) => JSON.stringify(value)
   .replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
   .replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 
+/** Home with the error, by path: request.url is the server's own address (https://0.0.0.0:3000) behind KOOMPI Cloud's proxy. */
+const backHome = (error: string) => new NextResponse(null, { status: 307, headers: { Location: `/?error=${error}` } });
+
 /**
  * KOOMPI Cloud's sign-in comes back here (lib/auth.ts login) with a one-time
  * code, which this server swaps for the person's KOOMPI ID tokens with the
@@ -33,11 +36,11 @@ export async function GET(request: NextRequest) {
   try {
     if (code) {
       const tokens = await exchangeSignInCode(code);
-      if (!tokens) return NextResponse.redirect(new URL('/?error=auth_failed', request.url));
+      if (!tokens) return backHome('auth_failed');
       ({ accessToken, refreshToken } = tokens);
     }
     if (!accessToken) {
-      return NextResponse.redirect(new URL('/?error=no_token', request.url));
+      return backHome('no_token');
     }
 
     const response = await fetch(KID_USERINFO_URL, { headers: { Authorization: `Bearer ${accessToken}` } });
@@ -48,7 +51,7 @@ export async function GET(request: NextRequest) {
     const db = await getDb();
     if (!db) {
       console.error('Database not initialized');
-      return NextResponse.redirect(new URL('/?error=database_error', request.url));
+      return backHome('database_error');
     }
 
     await db.execute({
@@ -116,6 +119,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Auth callback error:', error);
-    return NextResponse.redirect(new URL('/?error=auth_failed', request.url));
+    return backHome('auth_failed');
   }
 }

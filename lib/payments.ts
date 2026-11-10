@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { isIP } from 'node:net';
 
 /**
  * Payments through KOOMPI Cloud: customers pay with ABA, ACLEDA, Wing or any
@@ -65,8 +66,8 @@ async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Pr
 
 /**
  * Start a payment. amount: dollars as text ("1.99") or whole riels ("8000").
- * successUrl: the full address of the page the customer comes back to
- * (KOOMPI Cloud adds ?payment_id=…). reference: your order id. The link lasts 15 minutes.
+ * successUrl: the page the customer comes back to, after paying or cancelling
+ * (KOOMPI Cloud adds ?payment_id=…): `${appOrigin(request.headers)}/thanks`. reference: your order id. The link lasts 15 minutes.
  */
 export function startCheckout(input: {
   amount: string;
@@ -104,13 +105,26 @@ export function verifyEvent(rawBody: string, signature: string | null, tolerance
   return JSON.parse(rawBody) as PaymentEvent;
 }
 
+/** A host only this server or its network can reach: 127.x, ::1, 0.0.0.0, a private or link-local IP, localhost, *.local, *.internal, one label. */
+function isInternalHost(host: string): boolean {
+  const name = host.toLowerCase().replace(/:\d+$/, '').replace(/^\[(.*)\]$/, '$1').replace(/\.$/, '');
+  const ip = isIP(name);
+  if (ip === 4) return /^(?:0|10|127)\.|^169\.254\.|^192\.168\.|^172\.(?:1[6-9]|2\d|3[01])\.|^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(name);
+  if (ip === 6) return name === '::' || name === '::1' || /^(?:f[cd]|fe[89ab]|::ffff:)/.test(name);
+  return !name.includes('.') || /(?:^|\.)localhost$|\.(?:local|internal)$/.test(name);
+}
+
 /**
- * This app's public address, from the request (behind KOOMPI Cloud's proxy
- * the Host is the app's own), for the page customers come back to.
+ * This app's public address, for the pages people come back to (payments,
+ * sign-in): NEXT_PUBLIC_APP_URL, else the address KOOMPI Cloud's proxy says
+ * (x-forwarded-host, in live previews too), else Host. '' when all there is
+ * is an address only this server can reach (Next.js's own 127.0.0.1:3001):
+ * `${appOrigin(h)}/thanks` is then the path "/thanks", which KOOMPI Cloud
+ * puts on the app's public address. Never build one from request.url.
  */
 export function appOrigin(headers: Headers): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/+$/, '');
-  const host = headers.get('x-forwarded-host') ?? headers.get('host') ?? 'localhost:3000';
-  const proto = headers.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https');
-  return `${proto.split(',')[0]}://${host.split(',')[0]}`;
+  const host = (headers.get('x-forwarded-host') ?? headers.get('host') ?? '').split(',')[0]!.trim();
+  if (!host || isInternalHost(host)) return '';
+  return `${(headers.get('x-forwarded-proto') ?? 'https').split(',')[0]!.trim()}://${host}`;
 }

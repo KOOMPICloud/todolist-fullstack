@@ -73,6 +73,7 @@ Every list: loading (`ListSkeleton`), empty (`EmptyState` with the button that f
 - Black text on a saturated button; gradients, glows, glass blur.
 - Raw `<input type="date">` or `type="time"` when the choices are known.
 - Capitals with letter-spacing as labels; three identical cards in a row; lorem ipsum.
+- Building your own origin from `request.url` for payment or sign-in return addresses: use `appOrigin()` (`lib/payments.ts`).
 
 ## Changing the look
 
