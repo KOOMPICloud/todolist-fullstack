@@ -12,6 +12,8 @@ import type { Todo } from '@/lib/types';
 export function useTodos(enabled: boolean) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(enabled);
+  // The first load is done: an add from before signing in (useResumeAfterSignIn) waits for it.
+  const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -22,6 +24,7 @@ export function useTodos(enabled: boolean) {
       toast.error('Failed to load todos');
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }, []);
 
@@ -95,6 +98,7 @@ export function useTodos(enabled: boolean) {
   return {
     todos,
     loading,
+    loaded,
     refresh,
     add,
     toggle,

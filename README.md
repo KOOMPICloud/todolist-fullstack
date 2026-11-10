@@ -178,6 +178,10 @@ CREATE TABLE todos (
 5. Token stored in `localStorage` and used for all API calls
 6. User profile is upserted into the database
 
+A button whose action needs an account (adding a to-do, paying) works signed out too: `requireSignIn`
+(`lib/require-sign-in.ts`) signs in first, and `useResumeAfterSignIn` finishes the action once the person is
+back, on the same page ([DESIGN.md](DESIGN.md), Signing in).
+
 ## Payments
 
 Customers can pay with ABA, ACLEDA, Wing or any KHQR banking app, through KOOMPI Cloud. It is off until

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Heart, Loader2 } from 'lucide-react';
 import * as api from '@/lib/api';
+import { requireSignIn, useResumeAfterSignIn } from '@/lib/require-sign-in';
 import { Button } from '@/components/ui/button';
 
 function price(amount: string, currency: 'USD' | 'KHR') {
@@ -12,8 +13,10 @@ function price(amount: string, currency: 'USD' | 'KHR') {
 
 /**
  * A one-time payment through KOOMPI Cloud (lib/payments.ts). Hidden until
- * payments are turned on for the app. After paying, the customer comes back
- * with ?payment_id=…, and the server checks that payment before showing it paid.
+ * payments are turned on for the app. Pay works signed out too: it signs in,
+ * then the checkout goes on (lib/require-sign-in.ts). After paying, the
+ * customer comes back with ?payment_id=…, and the server checks that payment
+ * before showing it paid.
  */
 export function SupportCard() {
   const [data, setData] = useState<Awaited<ReturnType<typeof api.listOrders>> | null>(null);
@@ -60,20 +63,25 @@ export function SupportCard() {
     return () => clearTimeout(timer);
   }, [load]);
 
-  if (!data?.enabled || data.products.length === 0) return null;
-  const product = data.products[0]!;
-  const paid = data.orders.some((o) => o.product_id === product.id && o.status === 'paid');
+  const paidFor = (productId: string) => !!data?.orders.some((o) => o.product_id === productId && o.status === 'paid');
 
-  const buy = async () => {
+  const pay = async (productId: string) => {
+    if (!requireSignIn('pay', { productId })) return;
     setBusy(true);
     try {
-      const { checkoutUrl } = await api.checkout(product.id);
+      const { checkoutUrl } = await api.checkout(productId);
       window.location.href = checkoutUrl;
     } catch (error) {
       toast.error((error as Error).message);
       setBusy(false);
     }
   };
+  // Back signed in: the checkout goes on, once their orders are loaded (unless it was paid before).
+  useResumeAfterSignIn<{ productId: string }>('pay', ({ productId }) => !paidFor(productId) && pay(productId), data !== null);
+
+  if (!data?.enabled || data.products.length === 0) return null;
+  const product = data.products[0]!;
+  const paid = paidFor(product.id);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-4">
@@ -86,7 +94,7 @@ export function SupportCard() {
         </p>
       </div>
       {!paid && (
-        <Button variant="tinted" onClick={buy} disabled={busy}>
+        <Button variant="tinted" onClick={() => pay(product.id)} disabled={busy}>
           {busy ? <Loader2 className="animate-spin" /> : <Heart />}
           Pay {price(product.amount, product.currency)}
         </Button>

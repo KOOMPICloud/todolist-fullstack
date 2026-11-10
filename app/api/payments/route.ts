@@ -7,12 +7,13 @@ import { PRODUCTS } from '@/lib/products';
 export const runtime = 'nodejs';
 
 // GET /api/payments[?payment_id=…] - the products, and the signed-in person's orders.
+// Signed out: the products only (their Pay button signs in, then pays: lib/require-sign-in.ts).
 // With payment_id (the customer just came back from paying): asks KOOMPI Cloud
 // whether it is paid, in case the payment event has not arrived yet.
 export async function GET(request: NextRequest) {
-  const user = await getUserFromRequest(request);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!paymentsEnabled()) return NextResponse.json({ enabled: false, products: [], orders: [] });
+  const user = await getUserFromRequest(request);
+  if (!user) return NextResponse.json({ enabled: true, products: Object.values(PRODUCTS), orders: [] });
 
   const db = await getDb();
   if (!db) return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });

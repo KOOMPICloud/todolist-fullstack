@@ -65,6 +65,25 @@ How this app's screens are built: read it before building or changing one. Build
 
 Every list: loading (`ListSkeleton`), empty (`EmptyState` with the button that fills it), errors that say what to do, a toast after each change. A busy button says so ("Booking…"). Deleting asks once more (`components/todo/todo-item.tsx`).
 
+## Signing in
+
+A button whose action needs an account (Pay, Book, Order, Comment, Save, Add) works for someone signed out too: it starts Sign in with KOOMPI ID itself and finishes the action after, with what they chose. Never "please sign in" text, a disabled button, or a sign-in screen in its place.
+
+```tsx
+import { requireSignIn, useResumeAfterSignIn } from '@/lib/require-sign-in';
+
+const book = async (slot: string) => {
+  if (!requireSignIn('book', { slot })) return; // signing in; useResumeAfterSignIn books it once they are back
+  await api.book(slot);
+  toast.success('Booked');
+};
+useResumeAfterSignIn<{ slot: string }>('book', ({ slot }) => book(slot));
+```
+
+- `requireSignIn` first in the click handler, before any `await`. The payload is plain values, plus `File`s at its top level (a photo).
+- A form that signs in first stays open with what was typed, in case they cancel (`components/todo/add-todo-form.tsx`). `useResumeAfterSignIn`'s third argument waits until the page has loaded what the action changes (`components/todo/todo-app.tsx`, `support-card.tsx`).
+- A page that is all the person's own (their bookings, their account) shows one sign-in screen with its one "Sign in with KOOMPI ID" button (`components/todo/login-card.tsx`).
+
 ## Never
 
 - Nav spread down the side bar (`justify-between`), or the screen's title beside the app's name in a bar.
@@ -74,6 +93,7 @@ Every list: loading (`ListSkeleton`), empty (`EmptyState` with the button that f
 - Raw `<input type="date">` or `type="time"` when the choices are known.
 - Capitals with letter-spacing as labels; three identical cards in a row; lorem ipsum.
 - Building your own origin from `request.url` for payment or sign-in return addresses: use `appOrigin()` (`lib/payments.ts`).
+- "Sign in to …" text, or a disabled button, where the action could sign in itself (Signing in).
 
 ## Changing the look
 

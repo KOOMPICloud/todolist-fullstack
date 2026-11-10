@@ -23,8 +23,8 @@ const backHome = (error: string) => new NextResponse(null, { status: 307, header
  * address instead; those still work. The user is KOOMPI ID's answer for the
  * token, never anything in the address. The page then hands the sign-in to
  * the window that asked for it (in a popup: to the app or its live preview,
- * then closes; in the same tab: keeps it and goes home), and only for a
- * sign-in this browser started.
+ * then closes; in the same tab: keeps it and goes back to the page it was
+ * started from), and only for a sign-in this browser started.
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -97,15 +97,23 @@ export async function GET(request: NextRequest) {
           localStorage.setItem('access_token', data.accessToken);
           localStorage.setItem('refresh_token', data.refreshToken || '');
           localStorage.setItem('user', data.user || 'null');
+          // Which sign-in finished: an action waiting on it goes on (lib/require-sign-in.ts).
+          localStorage.setItem('koompi_signed_in', JSON.stringify({ state: pending.state, at: Date.now() }));
           localStorage.removeItem(KEY);
         }
+        // Back to the page the sign-in started from, when it is one of this app's own.
+        var back = '/';
+        try {
+          var to = new URL(pending.back, location.origin);
+          if (typeof pending.back === 'string' && to.origin === location.origin) back = to.pathname + to.search;
+        } catch (e) {}
         // The window that asked: it keeps the sign-in if it started it (lib/auth.ts acceptSignIn).
         try { if (window.opener) window.opener.postMessage(data, location.origin); } catch (e) {}
         try { var channel = new BroadcastChannel('koompi-sign-in'); channel.postMessage(data); channel.close(); } catch (e) {}
         var popup = !!window.opener || !!(pending && pending.popup);
         try { history.replaceState(null, '', '/api/auth/callback'); } catch (e) {}
         if (popup) window.close();
-        else if (ours) { location.replace('/'); return; }
+        else if (ours) { location.replace(back); return; }
         document.getElementById('note').textContent = popup
           ? 'Signed in. You can close this window.'
           : 'This sign-in was not started here. Go back to the app and sign in again.';

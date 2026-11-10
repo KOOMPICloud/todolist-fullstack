@@ -11,7 +11,8 @@ import { Sheet, SheetBody, SheetContent, SheetDescription, SheetFooter, SheetHea
 interface AddTodoSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (title: string, file: File | null) => Promise<void>;
+  /** False while it signs in first (the form stays as it was; the to-do is added once back). */
+  onAdd: (title: string, file: File | null) => Promise<boolean>;
 }
 
 /** A form in a Sheet: its fields in SheetBody, one main button in SheetFooter. */
@@ -36,7 +37,7 @@ export function AddTodoSheet({ open, onOpenChange, onAdd }: AddTodoSheetProps) {
     }
     setSubmitting(true);
     try {
-      await onAdd(title.trim(), file);
+      if (!(await onAdd(title.trim(), file))) return;
       setTitle('');
       setError(null);
       resetFile();

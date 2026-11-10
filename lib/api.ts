@@ -10,9 +10,10 @@ import type { Todo } from '@/lib/types';
  */
 
 function authHeaders(json = false): HeadersInit {
+  const token = getToken();
   return {
     ...(json ? { 'Content-Type': 'application/json' } : {}),
-    Authorization: `Bearer ${getToken()}`,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
@@ -128,7 +129,7 @@ export interface Order {
   paid_at: string | null;
 }
 
-/** Products and this person's orders; `paymentId` (back from paying) has the server check that payment first. */
+/** Products and this person's orders (none when signed out); `paymentId` (back from paying) has the server check that payment first. */
 export async function listOrders(
   paymentId?: string | null
 ): Promise<{ enabled: boolean; products: Product[]; orders: Order[] }> {

@@ -13,8 +13,10 @@ export const config = {
 export const PENDING_SIGN_IN = 'koompi_sign_in';
 /** How the callback (app/api/auth/callback) hands the sign-in back to the window that asked for it. */
 export const SIGN_IN_MESSAGE = 'koompi-sign-in';
+/** The last sign-in this browser finished, { state, at }: an action waiting on sign-in (lib/require-sign-in.ts) goes on only after its own. */
+export const SIGNED_IN = 'koompi_signed_in';
 /** How long a sign-in may take before it is no longer taken. */
-const SIGN_IN_TTL_MS = 10 * 60 * 1000;
+export const SIGN_IN_TTL_MS = 10 * 60 * 1000;
 
 /**
  * KOOMPI Cloud's sign-in page for this app, carrying the state the callback
@@ -41,6 +43,7 @@ export function acceptSignIn(data: SignIn): boolean {
   window.localStorage.setItem('access_token', data.accessToken);
   window.localStorage.setItem('refresh_token', data.refreshToken ?? '');
   window.localStorage.setItem('user', data.user ?? 'null');
+  window.localStorage.setItem(SIGNED_IN, JSON.stringify({ state: pending.state, at: Date.now() }));
   window.localStorage.removeItem(PENDING_SIGN_IN);
   return true;
 }
@@ -50,17 +53,30 @@ export function acceptSignIn(data: SignIn): boolean {
  * frame (KOOMPI Cloud's live preview shows the app in one), and the app keeps
  * its place. The callback hands the sign-in back to this window, which
  * reloads signed in. Where popups are blocked, the whole page goes to KOOMPI
- * ID and comes back instead (inside a frame it can't: it says to allow them).
+ * ID and comes back to the same page instead (inside a frame it can't: it
+ * says to allow them). For a button whose action needs an account, use
+ * requireSignIn (lib/require-sign-in.ts): it signs in, then the action goes on.
  */
 export const login = () => {
-  if (typeof window === 'undefined') return;
+  startSignIn();
+};
+
+/**
+ * What login does: the sign-in's state, or null when it could not start.
+ * beforeLeaving: what must be saved before this page goes to KOOMPI ID or
+ * reloads signed in (requireSignIn's photos).
+ */
+export function startSignIn(beforeLeaving?: Promise<unknown>): string | null {
+  if (typeof window === 'undefined') return null;
   if (!config.clientId || !config.apiBaseUrl) {
     alert('Sign-in is not set up yet: it is, once the app is deployed or previewed on KOOMPI Cloud.');
-    return;
+    return null;
   }
   const state = crypto.randomUUID();
   const framed = window.self !== window.top;
-  window.localStorage.setItem(PENDING_SIGN_IN, JSON.stringify({ state, at: Date.now(), popup: true }));
+  // back: the page to come back to from a full-page sign-in (app/api/auth/callback).
+  const back = window.location.pathname + window.location.search;
+  window.localStorage.setItem(PENDING_SIGN_IN, JSON.stringify({ state, at: Date.now(), popup: true, back }));
   const url = loginUrl(state);
 
   const width = 480;
@@ -72,11 +88,11 @@ export const login = () => {
     if (framed) {
       window.localStorage.removeItem(PENDING_SIGN_IN);
       alert('Allow pop-ups for this page to sign in with KOOMPI ID, or open the app in its own tab.');
-      return;
+      return null;
     }
-    window.localStorage.setItem(PENDING_SIGN_IN, JSON.stringify({ state, at: Date.now() }));
-    window.location.href = url;
-    return;
+    window.localStorage.setItem(PENDING_SIGN_IN, JSON.stringify({ state, at: Date.now(), back }));
+    void Promise.resolve(beforeLeaving).finally(() => { window.location.href = url; });
+    return state;
   }
 
   // The callback says so by a message to this window, a broadcast to the app's windows, or by
@@ -91,7 +107,7 @@ export const login = () => {
     window.removeEventListener('storage', onStorage);
     channel?.close();
     clearTimeout(giveUp);
-    window.location.reload();
+    void Promise.resolve(beforeLeaving).finally(() => window.location.reload());
   };
   const take = (data: SignIn) => {
     if (acceptSignIn(data) || isAuthenticated()) done();
@@ -110,7 +126,8 @@ export const login = () => {
     window.removeEventListener('storage', onStorage);
     channel?.close();
   }, SIGN_IN_TTL_MS);
-};
+  return state;
+}
 
 /**
  * Get current access token from localStorage
