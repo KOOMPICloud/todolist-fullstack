@@ -38,27 +38,30 @@ function AppShell({
 
   return (
     <div data-slot="app-shell" className="min-h-dvh lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-dvh flex-col border-r bg-card lg:flex">
-        <div className="flex h-16 shrink-0 items-center px-6 font-display text-lg font-semibold tracking-tight">
-          <span className="truncate">{brand}</span>
+      {/* The panel runs the page's whole height (a grid item stretches to its row); what is in it stays in view. */}
+      <aside className="hidden border-r bg-card lg:block">
+        <div className="sticky top-0 flex h-dvh flex-col">
+          <div className="flex h-16 shrink-0 items-center px-6 font-display text-lg font-semibold tracking-tight">
+            <span className="truncate">{brand}</span>
+          </div>
+          <nav aria-label="Main" className="flex flex-col gap-1 px-3 pt-2">
+            {nav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={current(item.href) ? "page" : undefined}
+                className={cn(
+                  "flex h-11 items-center gap-3 rounded-lg px-3 text-[15px] font-medium text-muted-foreground transition-colors duration-150 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/45 [&_svg]:size-5 [&_svg]:shrink-0",
+                  current(item.href) && "bg-primary/10 text-primary-ink hover:bg-primary/14 hover:text-primary-ink"
+                )}
+              >
+                {item.icon}
+                <span className="truncate">{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+          {actions && <div className="mt-auto flex items-center gap-1 border-t px-3 py-3">{actions}</div>}
         </div>
-        <nav aria-label="Main" className="flex flex-col gap-1 px-3 pt-2">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={current(item.href) ? "page" : undefined}
-              className={cn(
-                "flex h-11 items-center gap-3 rounded-lg px-3 text-[15px] font-medium text-muted-foreground transition-colors duration-150 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/45 [&_svg]:size-5 [&_svg]:shrink-0",
-                current(item.href) && "bg-primary/10 text-primary-ink hover:bg-primary/14 hover:text-primary-ink"
-              )}
-            >
-              {item.icon}
-              <span className="truncate">{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-        {actions && <div className="mt-auto flex items-center gap-1 border-t px-3 py-3">{actions}</div>}
       </aside>
 
       <div className="flex min-w-0 flex-col">
