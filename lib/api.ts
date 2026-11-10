@@ -65,12 +65,13 @@ export async function deleteTodo(id: string): Promise<void> {
 
 /**
  * Upload an image via KOOMPI Cloud storage's presigned-URL flow:
- * request token -> PUT to storage -> confirm completion. Returns the object key.
+ * request token -> PUT to storage -> confirm completion, as the signed-in
+ * person (the routes refuse anyone else). Returns the object key.
  */
 export async function uploadImage(file: File): Promise<string> {
   const tokenRes = await fetch('/api/upload/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(true),
     body: JSON.stringify({
       filename: file.name,
       contentType: file.type,
@@ -92,7 +93,7 @@ export async function uploadImage(file: File): Promise<string> {
 
   const completeRes = await fetch('/api/upload/complete', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(true),
     body: JSON.stringify({ objectId }),
   });
   await parse(completeRes, 'Failed to complete upload');

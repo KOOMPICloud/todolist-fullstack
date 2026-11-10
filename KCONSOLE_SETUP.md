@@ -35,7 +35,7 @@ No persistent volume is required — data lives in Turso.
 
 ## Object Storage
 
-Image uploads use KOOMPI Cloud object storage via presigned URLs:
+Image uploads use KOOMPI Cloud object storage via presigned URLs, for signed-in people only (`app/api/upload` answers 401 otherwise), each person's files under `users/<their id>/`:
 
 - `KCONSOLE_STORAGE_URL`
 - `KCONSOLE_STORAGE_KEY`

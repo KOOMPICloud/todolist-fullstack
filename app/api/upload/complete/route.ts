@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
 
 export const runtime = 'nodejs';
 
@@ -7,8 +8,12 @@ const STORAGE_KEY = process.env.KCONSOLE_STORAGE_KEY;
 const STORAGE_URL = process.env.KCONSOLE_STORAGE_URL || 'https://api-kconsole.koompi.cloud';
 
 // POST /api/upload/complete
-// Confirms upload completion to KOOMPI Cloud Storage
+// Confirms upload completion to KOOMPI Cloud Storage (a signed-in person only)
 export async function POST(request: NextRequest) {
+    if (!(await getUserFromRequest(request))) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!STORAGE_KEY) {
         return NextResponse.json({ error: 'Storage not configured (Missing KCONSOLE_STORAGE_KEY)' }, { status: 503 });
     }

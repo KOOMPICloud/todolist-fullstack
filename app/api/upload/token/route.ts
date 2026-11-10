@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest, userId } from '@/lib/auth-server';
 
 export const runtime = 'nodejs';
 
@@ -8,8 +9,15 @@ const STORAGE_KEY = process.env.KCONSOLE_STORAGE_KEY;
 const STORAGE_URL = process.env.KCONSOLE_STORAGE_URL || 'https://api-kconsole.koompi.cloud';
 
 // POST /api/upload/token
-// Requests a presigned URL from KOOMPI Cloud Storage
+// Requests a presigned URL from KOOMPI Cloud Storage, for a signed-in person only:
+// the storage is this app's, and paid for. Each person's files go in a folder of
+// their own (users/<their id>/), so whose a file is stays known.
 export async function POST(request: NextRequest) {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (!STORAGE_KEY) {
         return NextResponse.json({ error: 'Storage not configured (Missing KCONSOLE_STORAGE_KEY)' }, { status: 503 });
     }
@@ -33,7 +41,8 @@ export async function POST(request: NextRequest) {
                 filename,
                 contentType,
                 size,
-                visibility: 'public' // We want public images for todos
+                visibility: 'public', // We want public images for todos
+                path: `users/${userId(user).replace(/[^A-Za-z0-9_-]/g, '_')}`,
             })
         });
 
