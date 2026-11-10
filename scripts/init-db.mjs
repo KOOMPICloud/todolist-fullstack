@@ -30,6 +30,7 @@ const authToken =
 
 const client = createClient({ url, authToken });
 
+// The same statements as SCHEMA in lib/db.ts: change both together.
 await client.batch(
   [
     `CREATE TABLE IF NOT EXISTS users (
@@ -51,8 +52,21 @@ await client.batch(
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`,
-    `CREATE INDEX IF NOT EXISTS idx_todos_user_id ON todos(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_todos_user_created ON todos(user_id, created_at)`,
     `CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed)`,
+    `CREATE TABLE IF NOT EXISTS orders (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      product_id TEXT NOT NULL,
+      amount TEXT NOT NULL,
+      currency TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      payment_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      paid_at DATETIME
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_orders_user_created ON orders(user_id, created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_orders_payment_id ON orders(payment_id)`,
   ],
   'write'
 );

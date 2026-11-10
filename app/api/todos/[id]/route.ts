@@ -26,22 +26,6 @@ export async function PUT(
       return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
     }
 
-    // Check if we need to update image
-    if (imageUrl !== undefined) {
-      // Get current todo to see if there's an old image
-      const current = await db.execute({
-        sql: 'SELECT image_url FROM todos WHERE id = ?',
-        args: [id],
-      });
-      const currentImage = current.rows[0]?.image_url as string | null | undefined;
-
-      if (currentImage && currentImage !== imageUrl) {
-        // Delete old image if it's being replaced or removed
-        console.log(`Deleting old image: ${currentImage}`);
-        await deleteFile(currentImage);
-      }
-    }
-
     // Build dynamic update query
     const updates: string[] = [];
     const values: (string | number | null)[] = [];
@@ -61,20 +45,37 @@ export async function PUT(
       values.push(imageUrl);
     }
 
-    updates.push('updated_at = CURRENT_TIMESTAMP');
-    values.push(id); // For WHERE clause
-
-    if (updates.length > 1) { // > 1 because updated_at is always there
-      await db.execute({
-        sql: `UPDATE todos SET ${updates.join(', ')} WHERE id = ?`,
-        args: values,
-      });
+    if (updates.length === 0) {
+      // Nothing to change: the todo as it is.
+      const result = await db.execute({ sql: 'SELECT * FROM todos WHERE id = ?', args: [id] });
+      return NextResponse.json({ todo: result.rows[0] });
     }
 
-    const result = await db.execute({
-      sql: 'SELECT * FROM todos WHERE id = ?',
-      args: [id],
-    });
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    // RETURNING * gives back the changed row in the same trip: no SELECT after it.
+    const update = {
+      sql: `UPDATE todos SET ${updates.join(', ')} WHERE id = ? RETURNING *`,
+      args: [...values, id],
+    };
+
+    if (imageUrl === undefined) {
+      const result = await db.execute(update);
+      return NextResponse.json({ todo: result.rows[0] });
+    }
+
+    // A new or no image: the image it had and the change, in one trip (one
+    // transaction, in order, so the SELECT sees the old image).
+    const [before, result] = await db.batch(
+      [{ sql: 'SELECT image_url FROM todos WHERE id = ?', args: [id] }, update],
+      'write'
+    );
+    const currentImage = before.rows[0]?.image_url as string | null | undefined;
+
+    if (currentImage && currentImage !== imageUrl) {
+      // Delete old image now that it is replaced or removed
+      console.log(`Deleting old image: ${currentImage}`);
+      await deleteFile(currentImage);
+    }
 
     return NextResponse.json({ todo: result.rows[0] });
   } catch (error) {
@@ -101,22 +102,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
     }
 
-    // Get todo first to check for image
-    const current = await db.execute({
-      sql: 'SELECT image_url FROM todos WHERE id = ?',
+    // RETURNING gives back the deleted row's image in the same trip.
+    const result = await db.execute({
+      sql: 'DELETE FROM todos WHERE id = ? RETURNING image_url',
       args: [id],
     });
-    const imageUrl = current.rows[0]?.image_url as string | null | undefined;
+    const imageUrl = result.rows[0]?.image_url as string | null | undefined;
 
     if (imageUrl) {
       console.log(`Deleting image for todo ${id}: ${imageUrl}`);
       await deleteFile(imageUrl);
     }
-
-    await db.execute({
-      sql: 'DELETE FROM todos WHERE id = ?',
-      args: [id],
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

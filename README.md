@@ -41,7 +41,7 @@ A full-stack todo list application built with Next.js 16 App Router, KOOMPI ID s
    ```bash
    npm run db:init
    ```
-   The app also creates tables automatically on first request.
+   The app also creates tables automatically as it starts.
 
 4. Run the dev server:
    ```bash
@@ -112,13 +112,14 @@ todolist-fullstack/
 │   ├── use-auth.ts         # Client auth state
 │   └── use-todos.ts        # Todos state + mutations
 ├── lib/
-│   ├── db.ts               # Turso / libSQL client + schema
+│   ├── db.ts               # Turso / libSQL client + schema (and how to keep it fast)
 │   ├── auth.ts             # OAuth client utilities (browser)
 │   ├── auth-server.ts      # Bearer-token verification (API routes)
 │   ├── api.ts              # Client-side API + upload helpers
 │   ├── storage.ts          # Object storage helpers
 │   ├── types.ts            # Shared types
 │   └── utils.ts            # cn() helper
+├── instrumentation.ts      # Connects to the database as the server starts
 ├── scripts/init-db.mjs     # Schema init / migration script
 ├── components.json         # shadcn config
 ├── package.json
@@ -193,7 +194,7 @@ Previews use a test key: the bank is simulated and no money moves. To sell somet
 
 ### Database queries
 
-`getDb()` returns a libSQL client (async). Queries use `db.execute({ sql, args })`:
+`getDb()` returns the app's one shared libSQL client (async). Queries use `db.execute({ sql, args })`:
 
 ```typescript
 import { getDb } from '@/lib/db';
@@ -204,6 +205,23 @@ const result = await db!.execute({
   args: [userId],
 });
 const todos = result.rows;
+```
+
+The database is a network trip away (about 80 ms a read and 140 ms a write), so a request is
+as fast as the number of trips it makes:
+
+- Use `getDb()`'s shared client; never `createClient()` again (a new one takes about 0.7 s to connect).
+- Reads that don't depend on each other: one `db.batch([...], 'read')`, one trip.
+- Writes that belong together: one `db.batch([...], 'write')`, one trip, all or nothing (not `db.transaction()`: each step is a trip).
+- `INSERT / UPDATE / DELETE ... RETURNING *` gives back the row: no SELECT after a write.
+- An index in `SCHEMA` (lib/db.ts) for every new WHERE or ORDER BY.
+- No queries in a loop: `IN (...)`, a JOIN, or one batch.
+
+```typescript
+const [todos, orders] = await db!.batch([
+  { sql: 'SELECT * FROM todos WHERE user_id = ? ORDER BY created_at DESC', args: [userId] },
+  { sql: 'SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 50', args: [userId] },
+], 'read');
 ```
 
 ### Adding shadcn components

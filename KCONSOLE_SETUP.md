@@ -29,7 +29,8 @@ Injected automatically by KOOMPI Cloud:
 - `DATABASE_URL` — e.g. `libsql://your-db.turso.io`
 - `DATABASE_AUTH_TOKEN` — Turso auth token
 
-The schema is created automatically on first request (and via `npm run db:init`).
+The schema is created automatically as the app starts (`instrumentation.ts`, or else on its first request) and via `npm run db:init`.
+Each query is a network trip, so `lib/db.ts` says how to keep requests to few of them (one shared client, batches, `RETURNING`, indexes).
 No persistent volume is required — data lives in Turso.
 
 ## Object Storage

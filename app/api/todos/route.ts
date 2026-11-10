@@ -43,15 +43,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
     }
 
-    const id = crypto.randomUUID();
-    await db.execute({
-      sql: 'INSERT INTO todos (id, user_id, title, image_url) VALUES (?, ?, ?, ?)',
-      args: [id, userId(user), title, imageUrl || null],
-    });
-
+    // RETURNING * gives back the saved row in the same trip: no SELECT after it.
     const result = await db.execute({
-      sql: 'SELECT * FROM todos WHERE id = ?',
-      args: [id],
+      sql: 'INSERT INTO todos (id, user_id, title, image_url) VALUES (?, ?, ?, ?) RETURNING *',
+      args: [crypto.randomUUID(), userId(user), title, imageUrl || null],
     });
 
     return NextResponse.json({ todo: result.rows[0] }, { status: 201 });

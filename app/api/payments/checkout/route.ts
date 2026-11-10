@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
   const db = await getDb();
   if (!db) return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
 
+  // Saved (unpaid) before the payment starts, so its payment event always finds it.
   const orderId = crypto.randomUUID();
   await db.execute({
     sql: 'INSERT INTO orders (id, user_id, product_id, amount, currency) VALUES (?, ?, ?, ?, ?)',

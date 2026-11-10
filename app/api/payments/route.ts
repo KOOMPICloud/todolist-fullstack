@@ -18,28 +18,45 @@ export async function GET(request: NextRequest) {
   if (!db) return NextResponse.json({ error: 'Database not initialized' }, { status: 503 });
   const uid = userId(user);
 
+  const products = Object.values(PRODUCTS);
+  const listOrders = {
+    sql: 'SELECT id, product_id, amount, currency, status, payment_id, created_at, paid_at FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 50',
+    args: [uid],
+  };
+
   const paymentId = request.nextUrl.searchParams.get('payment_id');
-  if (paymentId) {
-    const order = await db.execute({ sql: 'SELECT id, status FROM orders WHERE payment_id = ? AND user_id = ?', args: [paymentId, uid] });
-    const row = order.rows[0];
-    if (row && row.status !== 'paid') {
-      try {
-        const payment = await getPayment(paymentId);
-        if (payment.status === 'paid' && payment.reference === row.id) {
-          await db.execute({
-            sql: "UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = ? AND status != 'paid'",
-            args: [row.id],
-          });
-        }
-      } catch (error) {
-        console.error('Payment check error:', error);
+  if (!paymentId) {
+    const orders = await db.execute(listOrders);
+    return NextResponse.json({ enabled: true, products, orders: orders.rows });
+  }
+
+  // The order this payment is for and the person's orders: two reads, one trip.
+  const [order, orders] = await db.batch(
+    [{ sql: 'SELECT id, status FROM orders WHERE payment_id = ? AND user_id = ?', args: [paymentId, uid] }, listOrders],
+    'read'
+  );
+  const row = order.rows[0];
+  if (row && row.status !== 'paid') {
+    try {
+      const payment = await getPayment(paymentId);
+      if (payment.status === 'paid' && payment.reference === row.id) {
+        // Mark it paid and read the orders again (now with it paid): one trip.
+        const [, paid] = await db.batch(
+          [
+            {
+              sql: "UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = ? AND status != 'paid'",
+              args: [row.id],
+            },
+            listOrders,
+          ],
+          'write'
+        );
+        return NextResponse.json({ enabled: true, products, orders: paid.rows });
       }
+    } catch (error) {
+      console.error('Payment check error:', error);
     }
   }
 
-  const orders = await db.execute({
-    sql: 'SELECT id, product_id, amount, currency, status, payment_id, created_at, paid_at FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 50',
-    args: [uid],
-  });
-  return NextResponse.json({ enabled: true, products: Object.values(PRODUCTS), orders: orders.rows });
+  return NextResponse.json({ enabled: true, products, orders: orders.rows });
 }
