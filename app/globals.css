@@ -4,7 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design tokens (DESIGN.md). Components use only these: bg-background,
+ * Design tokens (DESIGN.md). Every color is a tone of --hue: a tinted page,
+ * a colored side bar, one vivid accent. Components use only these: bg-background,
  * bg-card, bg-muted, text-foreground, text-muted-foreground, bg-primary with
  * text-primary-foreground, text-primary-ink, border-border. Change the look
  * here, in one place. KOOMPI Cloud's design_app adds design.css, which sets
@@ -17,63 +18,73 @@
  */
 :root {
   color-scheme: light;
-  --radius: 0.75rem;
+  /* The whole look comes from this one hue (0 to 360): 275 violet, 150 green, 20 coral, 225 blue. */
+  --hue: 275;
+  --radius: 1rem;
 
-  --background: oklch(0.975 0.002 270);
-  --foreground: oklch(0.21 0.006 270);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.006 270);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.006 270);
-  /* One accent: the main button, the current tab, what is selected. */
-  --primary: oklch(0.5 0.09 185);
+  --background: oklch(0.968 0.014 var(--hue));
+  --foreground: oklch(0.2 0.02 var(--hue));
+  --card: oklch(0.995 0.003 var(--hue));
+  --card-foreground: oklch(0.2 0.02 var(--hue));
+  --popover: oklch(0.995 0.003 var(--hue));
+  --popover-foreground: oklch(0.2 0.02 var(--hue));
+  --primary: oklch(0.5 0.2 var(--hue));
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.955 0.003 270);
-  --secondary-foreground: oklch(0.21 0.006 270);
-  --muted: oklch(0.955 0.003 270);
-  --muted-foreground: oklch(0.49 0.01 270);
-  --accent: oklch(0.955 0.003 270);
-  --accent-foreground: oklch(0.21 0.006 270);
+  --secondary: oklch(0.94 0.026 var(--hue));
+  --secondary-foreground: oklch(0.2 0.02 var(--hue));
+  --muted: oklch(0.94 0.026 var(--hue));
+  --muted-foreground: oklch(0.46 0.03 var(--hue));
+  --accent: oklch(0.94 0.026 var(--hue));
+  --accent-foreground: oklch(0.2 0.02 var(--hue));
   --destructive: oklch(0.52 0.19 27);
-  --border: oklch(0.915 0.004 270);
-  --input: oklch(0.86 0.006 270);
-  --ring: oklch(0.5 0.09 185);
+  --border: oklch(0.9 0.026 var(--hue));
+  --input: oklch(0.84 0.03 var(--hue));
+  --ring: oklch(0.5 0.2 var(--hue));
 
   /* Not in shadcn: colored text on the page, statuses, depth, type. */
-  --primary-ink: var(--d-accent-ink, oklch(0.48 0.09 185));
+  --primary-ink: var(--d-accent-ink, oklch(0.45 0.2 var(--hue)));
   --success: var(--d-ok, oklch(0.5 0.12 155));
   --warning: var(--d-warn, oklch(0.52 0.11 65));
   --float-shadow: 0 1px 2px oklch(0 0 0 / 0.05), 0 10px 30px oklch(0 0 0 / 0.09);
-  --heading-weight: var(--d-heading-weight, 650);
-  --heading-tracking: var(--d-heading-tracking, -0.012em);
+  --heading-weight: var(--d-heading-weight, 700);
+  --heading-tracking: var(--d-heading-tracking, -0.02em);
   --pill: var(--d-pill, 9999px);
+  /* The side bar and the top bar; the feature fill (d-spot, the welcome page) and the tint (d-soft). */
+  --nav: var(--d-nav, oklch(0.93 0.042 var(--hue)));
+  --spot: var(--d-spot, linear-gradient(135deg, oklch(0.5 0.2 var(--hue)), oklch(0.52 0.21 calc(var(--hue) + 45))));
+  --on-spot: var(--d-on-spot, oklch(0.99 0 0));
+  --soft: var(--d-soft, oklch(0.91 0.06 var(--hue)));
+  --on-soft: var(--d-on-soft, oklch(0.3 0.12 var(--hue)));
 }
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.16 0.004 270);
-  --foreground: oklch(0.965 0.003 270);
-  --card: oklch(0.205 0.005 270);
-  --card-foreground: oklch(0.965 0.003 270);
-  --popover: oklch(0.225 0.005 270);
-  --popover-foreground: oklch(0.965 0.003 270);
-  --primary: oklch(0.53 0.09 185);
+  --background: oklch(0.17 0.016 var(--hue));
+  --foreground: oklch(0.965 0.008 var(--hue));
+  --card: oklch(0.215 0.022 var(--hue));
+  --card-foreground: oklch(0.965 0.008 var(--hue));
+  --popover: oklch(0.235 0.024 var(--hue));
+  --popover-foreground: oklch(0.965 0.008 var(--hue));
+  --primary: oklch(0.54 0.2 var(--hue));
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.255 0.006 270);
-  --secondary-foreground: oklch(0.965 0.003 270);
-  --muted: oklch(0.255 0.006 270);
-  --muted-foreground: oklch(0.73 0.01 270);
-  --accent: oklch(0.255 0.006 270);
-  --accent-foreground: oklch(0.965 0.003 270);
+  --secondary: oklch(0.27 0.03 var(--hue));
+  --secondary-foreground: oklch(0.965 0.008 var(--hue));
+  --muted: oklch(0.27 0.03 var(--hue));
+  --muted-foreground: oklch(0.75 0.03 var(--hue));
+  --accent: oklch(0.27 0.03 var(--hue));
+  --accent-foreground: oklch(0.965 0.008 var(--hue));
   --destructive: oklch(0.7 0.17 25);
   --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.72 0.1 185);
+  --ring: oklch(0.72 0.14 var(--hue));
 
-  --primary-ink: var(--d-accent-ink, oklch(0.8 0.1 185));
+  --primary-ink: var(--d-accent-ink, oklch(0.82 0.11 var(--hue)));
   --success: var(--d-ok, oklch(0.78 0.14 155));
   --warning: var(--d-warn, oklch(0.83 0.12 80));
   --float-shadow: 0 1px 2px oklch(0 0 0 / 0.4), 0 12px 32px oklch(0 0 0 / 0.5);
+  --nav: var(--d-nav, oklch(0.215 0.034 var(--hue)));
+  --soft: var(--d-soft, oklch(0.3 0.07 var(--hue)));
+  --on-soft: var(--d-on-soft, oklch(0.9 0.06 var(--hue)));
 }
 
 @theme inline {
@@ -109,6 +120,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-nav: var(--nav);
 
   --shadow-float: var(--float-shadow);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -116,8 +128,8 @@
 
 /* Type scale: text-title (a screen's h1), text-heading (a section's h2), then Tailwind's base, sm, xs. */
 @theme {
-  --text-title: 1.625rem;
-  --text-title--line-height: 1.2;
+  --text-title: 2rem;
+  --text-title--line-height: 1.12;
   --text-title--font-weight: var(--heading-weight);
   --text-heading: 1.1875rem;
   --text-heading--line-height: 1.3;
@@ -152,9 +164,124 @@
   }
   @media (min-width: 1024px) {
     :root {
-      --text-title: 1.75rem;
+      --text-title: 2.375rem;
     }
   }
+}
+
+/*
+ * The look's own parts (DESIGN.md, Look): the feature block, the tint, and
+ * pages strangers see. design_app's design.css has the same class names and
+ * restyles them; in a layer here so it always wins.
+ */
+@layer components {
+  .d-spot {
+    display: grid;
+    gap: 0.5rem;
+    padding: clamp(1.25rem, 4vw, 2rem);
+    border-radius: var(--radius-2xl);
+    background: var(--spot);
+    color: var(--on-spot);
+  }
+  .d-spot :is(h2, h3, p, a) {
+    color: inherit;
+  }
+  .d-spot-value {
+    font: var(--heading-weight) clamp(2.5rem, 1.8rem + 3.5vw, 4rem) / 1 var(--font-display);
+    letter-spacing: var(--heading-tracking);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .d-soft {
+    background: var(--soft);
+    color: var(--on-soft);
+  }
+
+  /* A page without the side bar and the bars: the welcome, a public profile, a shared link. */
+  .d-public {
+    min-height: 100dvh;
+    background: var(--background);
+  }
+  .d-public h1 {
+    font-size: clamp(2.25rem, 1.4rem + 4.5vw, 4rem);
+    line-height: 1.04;
+  }
+  .d-welcome {
+    display: grid;
+    min-height: 100dvh;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+  .d-welcome-art {
+    display: grid;
+    align-content: space-between;
+    gap: 2rem;
+    min-height: 34dvh;
+    padding: clamp(1.5rem, 5vw, 4rem);
+    background: var(--spot);
+    color: var(--on-spot);
+  }
+  .d-welcome-mark {
+    font: var(--heading-weight) clamp(3.5rem, 1.5rem + 8vw, 8rem) / 0.92 var(--font-display);
+    letter-spacing: var(--heading-tracking);
+    overflow-wrap: anywhere;
+  }
+  .d-welcome-body {
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    gap: 1.25rem;
+    padding: clamp(1.5rem, 6vw, 5rem);
+  }
+  .d-welcome-body > * {
+    max-width: 36rem;
+  }
+  .d-eyebrow {
+    color: var(--primary-ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .d-lead {
+    color: var(--muted-foreground);
+    font-size: 1.125rem;
+  }
+  .d-facts {
+    display: grid;
+    width: 100%;
+    margin-top: 1rem;
+    gap: clamp(1.5rem, 3vw, 2.5rem);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  }
+  .d-fact-value {
+    font: var(--heading-weight) clamp(2.4rem, 5vw, 3.75rem) / 1 var(--font-display);
+    letter-spacing: var(--heading-tracking);
+  }
+  .d-fact-label {
+    margin-top: 0.5rem;
+    color: var(--muted-foreground);
+  }
+  @media (min-width: 900px) {
+    .d-welcome {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+    }
+  }
+}
+
+/* Out of the layer, to beat the components' own classes: a d-public page hides the shell, and a button on the feature fill is the fill's opposite. */
+[data-slot="app-shell"]:has(.d-public) {
+  display: block;
+}
+[data-slot="app-shell"]:has(.d-public) > :is(aside, nav),
+[data-slot="app-shell"]:has(.d-public) > div > header {
+  display: none;
+}
+[data-slot="app-shell"]:has(.d-public) > div > main {
+  padding: 0;
+}
+:is(.d-spot, .d-welcome-art) [data-slot="button"] {
+  background: var(--on-spot);
+  color: var(--d-spot-ink, oklch(0.45 0.2 var(--hue)));
 }
 
 @media (prefers-reduced-motion: reduce) {

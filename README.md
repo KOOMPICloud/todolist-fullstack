@@ -104,9 +104,9 @@ todolist-fullstack/
 ├── components/
 │   ├── ui/                 # The UI kit: AppShell, Screen, List, Sheet, Field, ChoiceChips… (DESIGN.md)
 │   ├── account-screen.tsx
+│   ├── welcome.tsx         # The page someone signed out sees
 │   └── todo/               # Feature components
 │       ├── todo-app.tsx        # Client container (wires hooks)
-│       ├── login-card.tsx
 │       ├── add-todo-form.tsx
 │       ├── todo-list.tsx
 │       ├── todo-item.tsx

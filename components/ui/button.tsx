@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
  * default 44px (the smallest comfortable touch target), lg 48px.
  */
 const buttonVariants = cva(
-  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg text-[15px] font-medium whitespace-nowrap transition-[background-color,color,box-shadow,scale] duration-150 ease-standard outline-none select-none focus-visible:ring-[3px] focus-visible:ring-ring/45 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-destructive/30 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[18px]",
+  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-pill text-[15px] font-semibold whitespace-nowrap transition-[background-color,color,box-shadow,scale] duration-150 ease-standard outline-none select-none focus-visible:ring-[3px] focus-visible:ring-ring/45 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-destructive/30 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[18px]",
   {
     variants: {
       variant: {
@@ -25,9 +25,9 @@ const buttonVariants = cva(
         link: "text-primary-ink underline-offset-4 hover:underline active:scale-100",
       },
       size: {
-        default: "h-11 px-4",
+        default: "h-11 px-5",
         sm: "h-9 gap-1.5 px-3 text-sm",
-        lg: "h-12 px-5 text-base",
+        lg: "h-13 px-7 text-base",
         icon: "size-11",
         "icon-sm": "size-9",
       },

@@ -47,8 +47,11 @@ How this app's screens are built: read it before building or changing one. Build
 ## Look
 
 - Colors only through the tokens in `app/globals.css`: `bg-background`, `bg-card`, `bg-muted`, `text-foreground`, `text-muted-foreground`, `bg-primary` + `text-primary-foreground` (the main button, the selection), `text-primary-ink` (colored text, links), `bg-primary/12` (a tint), `text-success`, `text-warning`, `text-destructive`. Never hex colors, `text-black`, `bg-white` or `gray-*`: they break dark mode and the look design_app gives the app.
-- One accent, for one thing per view. Text on a fill is its `-foreground` token; muted text never lighter than `text-muted-foreground`.
-- Type: `text-title` (a screen), `text-heading` (a section), 15 to 16px text, `text-sm` details, `text-xs` badges. Hierarchy from weight and space, not many sizes.
+- Color does work on every screen, never a white page of grey cards with one colored button: the page is tinted, the side bar and top bar are colored (`bg-nav`), the current tab is a filled pill, buttons are pills.
+- One feature block at the top of each tab's first screen: what matters now as one big number or line, in the feature fill. `<div className="d-spot"><div className="d-spot-value">3</div><p>to-dos left · 2 done</p></div>` (`components/todo/todo-app.tsx`). One a screen. `d-soft` is the quiet tint for a second highlight.
+- Someone signed out sees the welcome page, not a card in the shell: `components/welcome.tsx` (`d-public` hides the side bar and the bars; the app's name huge in the feature fill, what it does for them, one sign-in button, three true facts). Change its words for the app; other public pages (a shared link, a profile) are `d-public` too.
+- Text on a fill is its `-foreground` token; muted text never lighter than `text-muted-foreground`.
+- Type: `text-title` (a screen, big and bold), `text-heading` (a section), 15 to 16px text, `text-sm` details, `text-xs` badges; `d-spot-value` for the one big number.
 - Space groups: a title close to its detail, sections apart. Fewer boxes: no card in a card.
 - One filled button per view; a row is itself the target (no button on every row).
 - lucide-react icons, one size per place. A row's icon only when it differs from row to row; never emoji or text symbols as icons, no sparkles for AI.
@@ -82,14 +85,15 @@ useResumeAfterSignIn<{ slot: string }>('book', ({ slot }) => book(slot));
 
 - `requireSignIn` first in the click handler, before any `await`. The payload is plain values, plus `File`s at its top level (a photo).
 - A form that signs in first stays open with what was typed, in case they cancel (`components/todo/add-todo-form.tsx`). `useResumeAfterSignIn`'s third argument waits until the page has loaded what the action changes (`components/todo/todo-app.tsx`, `support-card.tsx`).
-- A page that is all the person's own (their bookings, their account) shows one sign-in screen with its one "Sign in with KOOMPI ID" button (`components/todo/login-card.tsx`).
+- A page that is all the person's own (their to-dos, their bookings, their account) shows the welcome page with its one "Sign in with KOOMPI ID" button (`components/welcome.tsx`).
 
 ## Never
 
 - Nav spread down the side bar (`justify-between`), or the screen's title beside the app's name in a bar.
 - Two light/dark icons at once, or theme code of your own: the `<head>` script and `ThemeToggle` do it, with no hydration warning.
 - A form or a list across a whole wide screen.
-- Black text on a saturated button; gradients, glows, glass blur.
+- Black text on a saturated button; a gradient or glow anywhere but the feature fill (`d-spot`, the welcome page).
+- A grey side bar, white cards with a thin border and one colored button: the plain look of a component kit.
 - Raw `<input type="date">` or `type="time"` when the choices are known.
 - Capitals with letter-spacing as labels; three identical cards in a row; lorem ipsum.
 - Building your own origin from `request.url` for payment or sign-in return addresses: use `appOrigin()` (`lib/payments.ts`).
@@ -97,7 +101,7 @@ useResumeAfterSignIn<{ slot: string }>('book', ({ slot }) => book(slot));
 
 ## Changing the look
 
-KOOMPI Cloud's design_app adds `design.css`: its colors, fonts and corners reach every component through the same variables. By hand, change a token in `app/globals.css` (`--primary`, `--radius`) in both `:root` and `.dark`, keeping its contrast.
+KOOMPI Cloud's design_app adds `design.css`: its colors, fonts and corners reach every component through the same variables. By hand, change `--hue` in `app/globals.css` (one number, 0 to 360: every color is a tone of it), or a token (`--primary`, `--radius`) in both `:root` and `.dark`, keeping its contrast.
 
 - Add to `app/globals.css`, never replace it: its `@import`s, the tokens in `:root` and `.dark`, and `@theme inline` are where every component's classes come from. Your own styles go after them, or in a stylesheet of your own imported with `./` (`@import './shop.css';`: without `./` Tailwind looks for a package).
 - Import only packages in `package.json` (add one with install_packages first). Never `shadcn/tailwind.css`: this app has no `shadcn` package, and `globals.css` already has what its components need.

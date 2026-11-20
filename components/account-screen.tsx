@@ -8,7 +8,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { List, ListRow } from '@/components/ui/list';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { LoginCard } from '@/components/todo/login-card';
+import { Welcome } from '@/components/welcome';
 
 /** The Account tab: who is signed in, the light/dark switch, signing out. */
 export function AccountScreen() {
@@ -21,7 +21,7 @@ export function AccountScreen() {
       </Screen>
     );
   }
-  if (!user) return <LoginCard />;
+  if (!user) return <Welcome />;
 
   const name = user.fullname || user.name || user.email || 'You';
 
