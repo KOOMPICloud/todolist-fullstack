@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import { Agent, fetch as fetchKeepingConnections } from 'undici';
 import type { AuthUser } from '@/lib/types';
+import { readSession } from '@/lib/session';
 
 /** KOOMPI ID's userinfo, which says whose a token is (another address only for a test of the sign-in). */
 export const KID_USERINFO_URL = process.env.KOOMPI_ID_USERINFO_URL || 'https://api.kid.koompi.org/oauth/userinfo';
@@ -68,8 +69,9 @@ function isPreviewToken(token: string): boolean {
 }
 
 /**
- * Verify the Bearer token on a request against KOOMPI ID and return the user,
- * or null if the token is missing/invalid. Used to guard API routes.
+ * The person signed in on a request, or null. The app's own session
+ * (lib/session.ts) is checked here; a KOOMPI ID token (from before the app
+ * had sessions) is asked of KOOMPI ID. Used to guard API routes.
  */
 export async function getUserFromRequest(
   request: NextRequest
@@ -83,6 +85,9 @@ export async function getUserFromRequest(
   if (isPreviewToken(token)) {
     return PREVIEW_USER;
   }
+  const session = readSession(token);
+  if (session) return session.user;
+  if (token.startsWith('ks1.')) return null;
 
   try {
     const response = await fetchKeepingConnections(KID_USERINFO_URL, {

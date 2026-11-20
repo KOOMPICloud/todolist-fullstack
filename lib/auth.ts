@@ -137,6 +137,38 @@ export const getToken = () => {
   return window.localStorage.getItem('access_token');
 };
 
+let sessionChecked = false;
+
+/**
+ * Keep the app's own session (lib/session.ts) going: once per page load, the
+ * server swaps a session older than a day for a fresh 30-day one, so someone
+ * who keeps using the app never signs in again. A session it no longer takes
+ * (expired, or the app's key changed) is dropped, and the page shows them
+ * signed out instead of failing. useAuth calls it.
+ */
+export async function keepSession(): Promise<void> {
+  if (typeof window === 'undefined' || sessionChecked) return;
+  sessionChecked = true;
+  const token = getToken();
+  if (!token?.startsWith('ks1.')) return;
+  try {
+    const res = await fetch('/api/auth/session', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 401) {
+      if (getToken() !== token) return; // signed in again meanwhile
+      window.localStorage.removeItem('access_token');
+      window.localStorage.removeItem('refresh_token');
+      window.localStorage.removeItem('user');
+      window.location.reload();
+      return;
+    }
+    if (!res.ok) return;
+    const data = (await res.json()) as { token?: string | null };
+    if (data.token && getToken() === token) window.localStorage.setItem('access_token', data.token);
+  } catch {
+    // Offline or the server is restarting: the session is still good, try on the next page load.
+  }
+}
+
 /**
  * Get current user from localStorage
  */

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { KID_USERINFO_URL, exchangeSignInCode } from '@/lib/auth-server';
+import { createSession } from '@/lib/session';
 
 export const runtime = 'nodejs';
 
@@ -24,7 +25,9 @@ const backHome = (error: string) => new NextResponse(null, { status: 307, header
  * token, never anything in the address. The page then hands the sign-in to
  * the window that asked for it (in a popup: to the app or its live preview,
  * then closes; in the same tab: keeps it and goes back to the page it was
- * started from), and only for a sign-in this browser started.
+ * started from), and only for a sign-in this browser started. What it hands
+ * back is the app's own 30-day session (lib/session.ts), not KOOMPI ID's
+ * 15-minute token, so people stay signed in.
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -74,7 +77,11 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    const handBack = { type: 'koompi-sign-in', accessToken, refreshToken, user: JSON.stringify(user), state };
+    // The app's own session when it can sign one; KOOMPI ID's tokens stay on this server.
+    const session = createSession(user);
+    const handBack = session
+      ? { type: 'koompi-sign-in', accessToken: session, refreshToken: '', user: JSON.stringify(user), state }
+      : { type: 'koompi-sign-in', accessToken, refreshToken, user: JSON.stringify(user), state };
     const html = `<!DOCTYPE html>
 <html lang="en">
   <head>
