@@ -66,7 +66,8 @@ function ListRow({
       {leading && <span className="relative z-10 flex shrink-0 items-center">{leading}</span>}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         {href !== undefined ? (
-          <Link href={href} data-row-target className={stretch}>{label}</Link>
+          // Next fetches every link in view ahead of a click: a list of 30 rows was 30 requests per visitor.
+          <Link href={href} prefetch={false} data-row-target className={stretch}>{label}</Link>
         ) : onClick ? (
           <button type="button" onClick={onClick} data-row-target className={cn(stretch, "cursor-pointer text-left")}>{label}</button>
         ) : (

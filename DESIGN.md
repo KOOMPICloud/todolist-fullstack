@@ -64,6 +64,17 @@ How this app's screens are built: read it before building or changing one. Build
 - The main action under the thumb: the Screen's `action` on a wide screen, a full-width button under the list on a phone (`components/todo/todo-app.tsx`).
 - Khmer: `lang="km"` on it, for its taller lines.
 
+## Fast for many visitors
+
+The app may run as several copies at once, and each deploy starts it afresh.
+
+- Rows link with `ListRow href` (no prefetch). A `<Link>` of your own in a `.map` gets `prefetch={false}`: Next fetches each link in view ahead of a click, a request per row for every visitor. The shell's nav links keep their prefetch.
+- What lasts goes in the database (`lib/db.ts`, one client for the app): sessions, codes, carts, counters. A `Map` in a route is lost at each deploy and missing on the other copies.
+- Uploads go in a bucket (create_bucket or connect_bucket), never the app's own folder.
+- Pictures: import them (`import hero from './hero.jpg'` gets a hashed name, kept a year). For files in `public/`, a `Cache-Control` of `public, max-age=0, s-maxage=86400` in `next.config.js` `headers()` lets the KOOMPI Cloud edge network keep them until the next deploy.
+- Never `public` or `s-maxage` on what depends on who asks (`/api/me`, a person's list, anything after sign-in): the edge would give one person's answer to everyone.
+- Refresh a list every 15 s or more, and not while the tab is hidden; after a change, load it again once.
+
 ## States
 
 Every list: loading (`ListSkeleton`), empty (`EmptyState` with the button that fills it), errors that say what to do, a toast after each change. A busy button says so ("Booking…"). Deleting asks once more (`components/todo/todo-item.tsx`).
