@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
+import { signInFromTelegram } from '@/lib/auth';
 import { telegramApp, type TelegramWebApp } from '@/lib/telegram';
 
 /** A color the page uses (a CSS variable) as #rrggbb, the only form Telegram takes; null when the browser can't say. */
@@ -24,7 +25,7 @@ function hexOf(variable: string): string | null {
 }
 
 /**
- * In Telegram (lib/telegram.ts), the app fits it: full height, Telegram's bars
+ * In Telegram (lib/telegram.ts), the app fits it: signed in by itself (lib/auth.ts signInFromTelegram), full height, Telegram's bars
  * in the app's colors (again when light/dark switches), Telegram's back button
  * on any page but the first, and links to other sites in Telegram's browser.
  * In app/layout.tsx; outside Telegram it does nothing.
@@ -44,6 +45,7 @@ export function TelegramFrame() {
       found.ready();
       found.expand();
       setApp(found);
+      signInFromTelegram();
     });
     return () => {
       live = false;

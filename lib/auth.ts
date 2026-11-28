@@ -3,6 +3,8 @@
  * deployed or previewed there).
  */
 
+import { isTelegram, telegramApp } from '@/lib/telegram';
+
 export const config = {
   clientId: process.env.NEXT_PUBLIC_KOOMPI_PROVIDER_CLIENT_ID || '',
   redirectUri: process.env.NEXT_PUBLIC_KOOMPI_PROVIDER_REDIRECT_URI || '',
@@ -54,7 +56,8 @@ export function acceptSignIn(data: SignIn): boolean {
  * its place. The callback hands the sign-in back to this window, which
  * reloads signed in. Where popups are blocked, the whole page goes to KOOMPI
  * ID and comes back to the same page instead (inside a frame it can't: it
- * says to allow them). For a button whose action needs an account, use
+ * says to allow them). In Telegram it signs in with Telegram, on the same
+ * KOOMPI ID account, without KOOMPI ID's page. For a button whose action needs an account, use
  * requireSignIn (lib/require-sign-in.ts): it signs in, then the action goes on.
  */
 export const login = () => {
@@ -76,6 +79,89 @@ export function startSignIn(beforeLeaving?: Promise<unknown>): string | null {
   const framed = window.self !== window.top;
   // back: the page to come back to from a full-page sign-in (app/api/auth/callback).
   const back = window.location.pathname + window.location.search;
+  if (isTelegram()) {
+    const fullPage = () => {
+      window.localStorage.setItem(PENDING_SIGN_IN, JSON.stringify({ state, at: Date.now(), back }));
+      void Promise.resolve(beforeLeaving).finally(() => { window.location.href = loginUrl(state); });
+      return state;
+    };
+    if (telegramTried() !== 'failed') {
+      window.localStorage.setItem(PENDING_SIGN_IN, JSON.stringify({ state, at: Date.now(), back }));
+      void telegramSignIn(state).then((redirect) => {
+        if (redirect) void Promise.resolve(beforeLeaving).finally(() => window.location.replace(redirect));
+        else if (framed) popupSignIn(state, back, beforeLeaving, framed);
+        else fullPage();
+      });
+      return state;
+    }
+    // Telegram's own app: a popup would leave it, so KOOMPI ID's page opens in the app's place.
+    if (!framed) return fullPage();
+  }
+  return popupSignIn(state, back, beforeLeaving, framed);
+}
+
+/** Set once the app has tried to sign in with Telegram in this visit; 'failed' when it couldn't. */
+const TELEGRAM_TRIED = 'koompi_telegram_sign_in';
+function telegramTried(): string | null {
+  try {
+    return window.sessionStorage.getItem(TELEGRAM_TRIED);
+  } catch {
+    return 'failed';
+  }
+}
+function markTelegram(value: 'tried' | 'failed') {
+  try {
+    window.sessionStorage.setItem(TELEGRAM_TRIED, value);
+  } catch {}
+}
+
+/**
+ * In Telegram (lib/telegram.ts), who is signing in is already known: Telegram
+ * signs what it hands the app, KOOMPI Cloud checks it with the bot linked to
+ * the app (add_telegram) and signs them in on the KOOMPI ID account that
+ * "Sign in with Telegram" on KOOMPI ID uses, so never a second one. The
+ * callback's address (?code&state), or null when it can't be done (no bot
+ * linked, opened without Telegram's data, offline): then KOOMPI ID's page.
+ */
+async function telegramSignIn(state: string): Promise<string | null> {
+  markTelegram('tried');
+  const app = await telegramApp();
+  let redirect: unknown = null;
+  if (app?.initData) {
+    try {
+      const res = await fetch(`${config.apiBaseUrl}/api/provider/telegram/${encodeURIComponent(config.clientId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: app.initData, redirect_uri: config.redirectUri || undefined, state }),
+      });
+      if (res.ok) redirect = ((await res.json()) as { redirect?: unknown }).redirect;
+    } catch {}
+  }
+  if (typeof redirect === 'string' && /^https?:\/\//.test(redirect)) return redirect;
+  markTelegram('failed');
+  return null;
+}
+
+/**
+ * Opened in Telegram signed out: signs in by itself, once per visit (a sign-in
+ * that fails comes back to /?error=…, which must not start another). In
+ * components/telegram.tsx; elsewhere it does nothing.
+ */
+export function signInFromTelegram(): void {
+  if (typeof window === 'undefined' || !isTelegram() || isAuthenticated() || !config.clientId || telegramTried()) return;
+  const state = crypto.randomUUID();
+  window.localStorage.setItem(PENDING_SIGN_IN, JSON.stringify({ state, at: Date.now(), back: window.location.pathname + window.location.search }));
+  void telegramSignIn(state).then((redirect) => {
+    let pending: { state?: string } | null = null;
+    try { pending = JSON.parse(window.localStorage.getItem(PENDING_SIGN_IN) ?? 'null'); } catch {}
+    // A tap on Sign in meanwhile started its own: that one goes on.
+    if (pending?.state !== state) return;
+    if (redirect && !isAuthenticated()) window.location.replace(redirect);
+    else window.localStorage.removeItem(PENDING_SIGN_IN);
+  });
+}
+
+function popupSignIn(state: string, back: string, beforeLeaving: Promise<unknown> | undefined, framed: boolean): string | null {
   window.localStorage.setItem(PENDING_SIGN_IN, JSON.stringify({ state, at: Date.now(), popup: true, back }));
   const url = loginUrl(state);
 
