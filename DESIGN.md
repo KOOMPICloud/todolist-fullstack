@@ -87,6 +87,17 @@ useResumeAfterSignIn<{ slot: string }>('book', ({ slot }) => book(slot));
 - A form that signs in first stays open with what was typed, in case they cancel (`components/todo/add-todo-form.tsx`). `useResumeAfterSignIn`'s third argument waits until the page has loaded what the action changes (`components/todo/todo-app.tsx`, `support-card.tsx`).
 - A page that is all the person's own (their to-dos, their bookings, their account) shows the welcome page with its one "Sign in with KOOMPI ID" button (`components/welcome.tsx`).
 
+## Home screen and Telegram
+
+The app installs to a phone's home screen and opens as a Telegram Mini App (a bot's app, `t.me/<bot>`) as it is. Keep what does it:
+
+- `app/brand.ts`: the name and colors of the icons and the install manifest. Rename the app there too. `app/manifest.ts`, `app/icon.svg`, `app/apple-icon.tsx` and `app/app-icon/` draw from it; design_app rewrites them with each design.
+- No service worker and no offline cache (next-pwa, Serwist, `sw.js`): each page is always the last deploy's, and the app installs without one.
+- In Telegram, `components/telegram.tsx` fits the app: Telegram's bars in its colors, Telegram's back button on inner pages, links to other sites in Telegram's browser. Outside Telegram it loads nothing. On a screen that needs it: `isTelegram()`, and `telegramApp()` for Telegram's own parts (`HapticFeedback`, the user's first name in `initDataUnsafe.user`; who they are for real comes from signing in).
+- Fixed bars and sheets keep clear of the notch and Telegram's buttons with `var(--safe-top)` and `var(--safe-bottom)`, never `env(safe-area-inset-*)` alone.
+- Telegram on the web shows the app in a frame: `next.config.js` lets Telegram and KOOMPI Cloud frame it (`frame-ancestors`). Keep both when changing headers.
+- Selling inside Telegram: digital goods and services (a subscription, premium features, in-app content) are paid in Telegram Stars (XTR), as Telegram's rules for Mini Apps require. Physical goods and services in person (a coffee, a delivery, a booking) can use ABA and KHQR (`lib/payments.ts`).
+
 ## Never
 
 - Nav spread down the side bar (`justify-between`), or the screen's title beside the app's name in a bar.
@@ -98,6 +109,7 @@ useResumeAfterSignIn<{ slot: string }>('book', ({ slot }) => book(slot));
 - Capitals with letter-spacing as labels; three identical cards in a row; lorem ipsum.
 - Building your own origin from `request.url` for payment or sign-in return addresses: use `appOrigin()` (`lib/payments.ts`).
 - "Sign in to …" text, or a disabled button, where the action could sign in itself (Signing in).
+- A service worker or an offline cache: people would see an old version after a deploy (Home screen and Telegram).
 
 ## Changing the look
 

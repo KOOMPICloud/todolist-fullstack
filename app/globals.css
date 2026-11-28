@@ -55,6 +55,14 @@
   --on-spot: var(--d-on-spot, oklch(0.99 0 0));
   --soft: var(--d-soft, oklch(0.91 0.06 var(--hue)));
   --on-soft: var(--d-on-soft, oklch(0.3 0.12 var(--hue)));
+
+  /* Room for the notch and the home bar; in Telegram's full screen, for its buttons too (components/telegram.tsx). Fixed bars and sheets use these, never env() alone. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-safe-area-inset-bottom, 0px));
+}
+
+.tg-fullscreen {
+  --safe-top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
 }
 
 .dark {

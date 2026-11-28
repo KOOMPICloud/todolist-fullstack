@@ -29,6 +29,16 @@ const nextConfig = {
   // packages went from 28.5 to 11.8 MB compressed). Turning the optimizer on
   // needs it back: remove this line with unoptimized.
   outputFileTracingExcludes: { '*': ['node_modules/sharp/**', 'node_modules/@img/**'] },
+  // Who may show the app in a frame: KOOMPI Cloud (its Showcase) and Telegram on the web, which opens a
+  // Mini App in one. Without it the edge's X-Frame-Options SAMEORIGIN refuses both. Keep them when changing headers.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [{ key: 'Content-Security-Policy', value: "frame-ancestors 'self' https://koompi.cloud https://web.telegram.org" }],
+      },
+    ];
+  },
   images: {
     // Serve images straight from object storage — the client fetches them
     // directly instead of routing through the Next.js image optimizer.

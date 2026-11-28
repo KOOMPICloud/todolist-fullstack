@@ -65,18 +65,18 @@ function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 box-content bg-nav pt-[env(safe-area-inset-top)] pr-2 pl-4 lg:hidden">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 box-content bg-nav pt-[var(--safe-top)] pr-2 pl-4 lg:hidden">
           <span className="min-w-0 flex-1 truncate font-display text-xl font-bold tracking-tight">{brand}</span>
           {actions}
         </header>
-        <main className="flex-1 px-4 pt-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">
+        <main className="flex-1 px-4 pt-5 pb-[calc(6.5rem+var(--safe-bottom))] sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">
           {children}
         </main>
       </div>
 
       <nav
         aria-label="Main"
-        className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 lg:hidden"
+        className="fixed inset-x-3 bottom-[max(0.75rem,var(--safe-bottom))] z-40 lg:hidden"
       >
         <div className="mx-auto flex max-w-md gap-1 rounded-[min(var(--pill),1.75rem)] border bg-card p-1.5 shadow-float">
           {nav.map((item) => (
